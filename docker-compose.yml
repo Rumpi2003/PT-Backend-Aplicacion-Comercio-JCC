@@ -1,0 +1,57 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: ptjcc_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: PT_JCC
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+  backend-dev:
+    profiles: ["dev"]
+    build:
+      context: ./Backend
+      target: dev
+    container_name: ptjcc_backend_dev
+    restart: unless-stopped
+    depends_on:
+      - db
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: 3000
+      NODE_ENV: development
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: PT_JCC
+    volumes:
+      - ./Backend:/app
+      - /app/node_modules
+  backend-prod:
+    profiles: ["prod"]
+    build:
+      context: ./Backend
+      target: prod
+    container_name: ptjcc_backend_prod
+    restart: unless-stopped
+    depends_on:
+      - db
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: 3000
+      NODE_ENV: production
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: PT_JCC
+
+volumes:
+  pgdata:
