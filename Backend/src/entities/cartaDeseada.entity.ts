@@ -18,11 +18,11 @@ export class CartaDeseada {
     @PrimaryGeneratedColumn({ name: 'id_carta_deseada', type: 'int' })
     id_carta_deseada!: number;
 
-    @ManyToOne(() => Usuario, (usuario) => usuario.cartas_deseadas, { eager: true })
+    @ManyToOne(() => Usuario, (usuario) => usuario.cartas_deseadas, { nullable: false, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
     @JoinColumn({ name: 'id_usuario' })
     usuario!: UsuarioType;
 
-    @ManyToOne(() => TipoCarta, (tipoCarta) => tipoCarta.deseadas, { eager: true })
+    @ManyToOne(() => TipoCarta, (tipoCarta) => tipoCarta.deseadas, { nullable: false, onDelete: 'RESTRICT', onUpdate: 'CASCADE' })
     @JoinColumn({ name: 'id_tipo_carta' })
     tipo_carta!: TipoCartaType;
 

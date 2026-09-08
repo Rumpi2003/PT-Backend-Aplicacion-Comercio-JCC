@@ -19,7 +19,7 @@ export class Usuario {
     @PrimaryGeneratedColumn({ name: 'id_usuario', type: 'int' })
     id_usuario!: number;
 
-    @ManyToOne(() => Comuna, (comuna) => comuna.usuarios, { eager: true, nullable: false })
+    @ManyToOne(() => Comuna, (comuna) => comuna.usuarios, { nullable: false, onDelete: 'RESTRICT', onUpdate: 'CASCADE' })
     @JoinColumn({ name: 'id_comuna' })
     comuna!: ComunaType;
 

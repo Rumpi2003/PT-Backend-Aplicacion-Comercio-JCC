@@ -11,7 +11,7 @@ export class TipoCarta {
     @PrimaryGeneratedColumn({ name: 'id_tipo_carta', type: 'int' })
     id_tipo_carta!: number;
 
-    @ManyToOne(() => Franquicia, (franquicia) => franquicia.cartas, { eager: true, nullable: false })
+    @ManyToOne(() => Franquicia, (franquicia) => franquicia.cartas, { nullable: false, onDelete: 'RESTRICT', onUpdate: 'CASCADE' })
     @JoinColumn({ name: 'id_franquicia' })
     franquicia!: FranquiciaType;
 

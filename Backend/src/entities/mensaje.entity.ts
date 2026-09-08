@@ -9,11 +9,11 @@ export class Mensaje {
     @PrimaryGeneratedColumn({ name: 'id_mensaje', type: 'int' })
     id_mensaje!: number;
 
-    @ManyToOne(() => Transaccion, (transaccion) => transaccion.mensajes, { eager: true, nullable: false })
+    @ManyToOne(() => Transaccion, (transaccion) => transaccion.mensajes, { nullable: false, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
     @JoinColumn({ name: 'id_transaccion' })
     transaccion!: TransaccionType;
 
-    @ManyToOne(() => Usuario, (emisor) => emisor.mensajes_enviados, { eager: true, nullable: false })
+    @ManyToOne(() => Usuario, (emisor) => emisor.mensajes_enviados, { nullable: false, onDelete: 'RESTRICT', onUpdate: 'CASCADE' })
     @JoinColumn({ name: 'id_emisor' })
     emisor!: UsuarioType;
 

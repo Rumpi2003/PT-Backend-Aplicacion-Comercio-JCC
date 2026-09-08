@@ -12,11 +12,11 @@ export class DetalleTransaccion {
     @PrimaryColumn({ name: 'id_carta_ofrecida', type: 'int' })
     id_carta_ofrecida!: number;
 
-    @ManyToOne(() => CartaOfrecida, (cartaOfrecida) => cartaOfrecida.detalles_transaccion, { eager: true })
+    @ManyToOne(() => CartaOfrecida, (cartaOfrecida) => cartaOfrecida.detalles_transaccion, { nullable: false, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
     @JoinColumn({ name: 'id_carta_ofrecida' })
     carta_ofrecida!: CartaOfrecidaType;
 
-    @ManyToOne(() => Transaccion, (transaccion) => transaccion.detalles_transaccion, { eager: true })
+    @ManyToOne(() => Transaccion, (transaccion) => transaccion.detalles_transaccion, { nullable: false, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
     @JoinColumn({ name: 'id_transaccion' })
     transaccion!: TransaccionType;
 

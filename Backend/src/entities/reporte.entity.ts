@@ -32,15 +32,15 @@ export class Reporte {
     @PrimaryGeneratedColumn({ name: 'id_reporte', type: 'int' })
     id_reporte!: number;
 
-    @ManyToOne(() => Usuario, (usuario_reportante) => usuario_reportante.reportes_realizados, { eager: true, nullable: false })
+    @ManyToOne(() => Usuario, (usuario_reportante) => usuario_reportante.reportes_realizados, { nullable: false, onDelete: 'RESTRICT', onUpdate: 'CASCADE' })
     @JoinColumn({ name: 'id_usuario_reportante' })
     usuario_reportante!: UsuarioType;
 
-    @ManyToOne(() => Usuario, (usuario_reportado) => usuario_reportado.reportes_recibidos, { eager: true, nullable: false })
+    @ManyToOne(() => Usuario, (usuario_reportado) => usuario_reportado.reportes_recibidos, { nullable: false, onDelete: 'RESTRICT', onUpdate: 'CASCADE' })
     @JoinColumn({ name: 'id_usuario_reportado' })
     usuario_reportado!: UsuarioType;
 
-    @OneToOne(() => Transaccion, (transaccion) => transaccion.reporte, { eager: true, nullable: true })
+    @OneToOne(() => Transaccion, (transaccion) => transaccion.reporte, { nullable: true, onDelete: 'SET NULL', onUpdate: 'CASCADE' })
     @JoinColumn({ name: 'id_transaccion' })
     transaccion!: TransaccionType | null;
 

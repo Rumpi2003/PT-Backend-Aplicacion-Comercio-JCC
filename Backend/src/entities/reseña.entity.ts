@@ -10,11 +10,11 @@ export class Reseña {
     @PrimaryColumn({ name: 'id_usuario_reseñado', type: 'int' })
     id_usuario_reseñado!: number;
 
-    @ManyToOne(() => Usuario, (usuario_reseñador) => usuario_reseñador.reseñas_realizadas, { eager: true })
+    @ManyToOne(() => Usuario, (usuario_reseñador) => usuario_reseñador.reseñas_realizadas, { nullable: false, onDelete: 'RESTRICT', onUpdate: 'CASCADE' })
     @JoinColumn({ name: 'id_usuario_reseñador' })
     usuario_reseñador!: UsuarioType;
 
-    @ManyToOne(() => Usuario, (usuario_reseñado) => usuario_reseñado.reseñas_recibidas, { eager: true })
+    @ManyToOne(() => Usuario, (usuario_reseñado) => usuario_reseñado.reseñas_recibidas, { nullable: false, onDelete: 'RESTRICT', onUpdate: 'CASCADE' })
     @JoinColumn({ name: 'id_usuario_reseñado' })
     usuario_reseñado!: UsuarioType;
 
