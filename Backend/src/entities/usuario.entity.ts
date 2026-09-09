@@ -23,19 +23,19 @@ export class Usuario {
     @JoinColumn({ name: 'id_comuna' })
     comuna!: ComunaType;
 
-    @Column({ type: 'varchar', length: 255 })
+    @Column({ type: 'varchar', length: 255, unique: true, nullable: false })
     correo!: string;
 
-    @Column({ type: 'varchar', length: 255 })
+    @Column({ type: 'varchar', length: 255, nullable: false })
     contraseña!: string;
 
-    @Column({ type: 'varchar', length: 255 })
+    @Column({ type: 'varchar', length: 255, unique: true, nullable: false })
     nombre_usuario!: string;
 
-    @Column({ type: 'varchar', length: 255 })
+    @Column({ type: 'varchar', length: 255, default: '' })
     descripcion_perfil!: string;
 
-    @Column({ type: 'varchar', length: 255 })
+    @Column({ type: 'varchar', length: 255, default: '' })
     contacto!: string;
 
     @Column({ type: 'float', default: 0 })
@@ -44,13 +44,13 @@ export class Usuario {
     @Column({ type: 'int', default: 0 })
     radio_geo!: number;
 
-    @Column({ type: 'geography', spatialFeatureType: 'Point', srid: 4326 })
+    @Column({ type: 'geography', spatialFeatureType: 'Point', srid: 4326, nullable: true, default: null })
     ultimas_coordenadas!: string;
 
     @Column({ type: 'boolean', default: false })
     modo_geo_activado!: boolean;
 
-    @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+    @Column({ type: 'timestamp', nullable: true, default: null })
     ultima_update_geo!: Date;
 
     @Column({ type: 'boolean', default: true })

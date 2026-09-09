@@ -6,19 +6,23 @@ import cors from 'cors';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
 import { AppDataSource } from './config/db.config.js';
+import routerApi from './routes/index.routes.js';
 
 dotenv.config();
 
 const app = express();
-const htppServer = createServer(app);
+const httpServer = createServer(app);
+const PORT = process.env.PORT || 3000;
 
 // Middlewares
 app.use(cors());
 app.use(express.json());
 app.use(morgan('dev'));
 
+routerApi(app);
+
 // Configuración de WebSockets para la app
-const io = new Server(htppServer, {
+const io = new Server(httpServer, {
     cors: {
         origin: '*',
         methods: ['GET', 'POST']
@@ -26,14 +30,14 @@ const io = new Server(htppServer, {
 });
 
 // Inicializar Base de Datos y Arrancar Servidor
-const PORT = process.env.PORT || 3000;
+
 
 AppDataSource.initialize()
     .then(() => {
         console.log('Base de datos inicializada correctamente');
 
         // Iniciar servidor HTTP / WebSocket solo si conecta la BD
-        htppServer.listen(PORT, () => {
+        httpServer.listen(PORT, () => {
             console.log(`Servidor corriendo en el puerto ${PORT}`);
         });
     })
