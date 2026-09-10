@@ -6,3 +6,12 @@ export class ConflictError extends Error {
         this.name = 'ConflictError';
     }
 }
+
+export class CredentialError extends Error {
+    statusCode = 401;
+
+    constructor(message: string) {
+        super(message);
+        this.name = 'CredentialError';
+    }
+}

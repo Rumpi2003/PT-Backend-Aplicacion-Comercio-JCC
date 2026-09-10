@@ -66,6 +66,42 @@ const router = Router();
  *         description: Error interno del servidor
  */
 router.post('/register', authController.register);
+
+/**
+ * @openapi
+ * /auth/login:
+ *   post:
+ *     summary: Inicio de sesión de un usuario
+ *     tags:
+ *       - Autenticación
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - correo
+ *               - contraseña
+ *             properties:
+ *               correo:
+ *                 type: string
+ *                 format: email
+ *                 required: true
+ *               contraseña:
+ *                 type: string
+ *                 maxLength: 64
+ *                 required: true
+ *     responses:
+ *       200:
+ *         description: Inicio de sesión exitoso
+ *       400:
+ *         description: Datos inválidos [lista de campos con errores]
+ *       401:
+ *         description: Credenciales incorrectas
+ *       500:
+ *         description: Error interno del servidor
+ */
 router.post('/login', authController.login);
 
 router.get('/perfil', authMiddleware, (req, res) => {

@@ -1,7 +1,7 @@
 import type { Request, Response } from 'express';
 import { authService } from '../services/auth.service.js';
 import { sendSuccess, sendError } from '../handlers/responseHandlers.js'
-import { ConflictError } from '../handlers/errorHandlers.js';
+import { ConflictError, CredentialError } from '../handlers/errorHandlers.js';
 import { RegistrarUsuarioSchema, LoginUsuarioSchema } from '../validations/usuario.validation.js';
 
 export const authController = {
@@ -33,7 +33,11 @@ export const authController = {
             const result = await authService.login(value);
             sendSuccess(res, result);
         } catch (error: any) {
-            sendError(res, 'Error al iniciar sesión', [error.message], 401);
+            if (error instanceof CredentialError) {
+                sendError(res, 'Credenciales incorrectas', [error.message], 401);
+            } else {
+                sendError(res, 'Error interno del servidor', [error.message], 500);
+            }
         }
     }
 }

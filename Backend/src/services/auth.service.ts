@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 import { AppDataSource } from '../config/db.config.js';
 import { Usuario } from '../entities/usuario.entity.js';
 import { Comuna } from '../entities/comuna.entity.js';
-import { ConflictError } from '../handlers/errorHandlers.js';
+import { ConflictError, CredentialError } from '../handlers/errorHandlers.js';
 
 type RegisterInput = {
     correo: string;
@@ -114,7 +114,7 @@ export const authService = {
         });
 
         if (!usuario) {
-            throw new Error('El correo no está registrado');
+            throw new CredentialError('El correo no está registrado');
         }
 
         const contraseñaValida = await bcrypt.compare(contraseña, usuario.contraseña);
