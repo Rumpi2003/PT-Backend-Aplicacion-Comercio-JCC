@@ -35,8 +35,8 @@ export class Usuario {
     @Column({ type: 'varchar', length: 255, default: '' })
     descripcion_perfil!: string;
 
-    @Column({ type: 'varchar', length: 255, default: '' })
-    contacto!: string;
+    @Column({ type: 'varchar', length: 255, unique: true, nullable: true })
+    contacto!: string | null;
 
     @Column({ type: 'float', default: 0 })
     puntuacion_promedio!: number;
@@ -45,13 +45,13 @@ export class Usuario {
     radio_geo!: number;
 
     @Column({ type: 'geography', spatialFeatureType: 'Point', srid: 4326, nullable: true, default: null })
-    ultimas_coordenadas!: string;
+    ultimas_coordenadas!: string | null;
 
     @Column({ type: 'boolean', default: false })
     modo_geo_activado!: boolean;
 
     @Column({ type: 'timestamp', nullable: true, default: null })
-    ultima_update_geo!: Date;
+    ultima_update_geo!: Date | null;
 
     @Column({ type: 'boolean', default: true })
     visibilidad_perfil!: boolean;

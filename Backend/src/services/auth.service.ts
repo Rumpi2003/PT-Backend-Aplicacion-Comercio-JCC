@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import { AppDataSource } from '../config/db.config.js';
 import { Usuario } from '../entities/usuario.entity.js';
 import { Comuna } from '../entities/comuna.entity.js';
+import { ConflictError } from '../handlers/errorHandlers.js';
 
 type RegisterInput = {
     correo: string;
@@ -35,7 +36,7 @@ export const authService = {
 
         // Validacion 1°: Se verifica que el correo no este registrado
         if (correoExistente) {
-            throw new Error('El correo ya está en uso');
+            throw new ConflictError('El correo ya está en uso');
         }
 
         const nombreExistente = await usuarioRepo.findOne({
@@ -44,16 +45,28 @@ export const authService = {
 
         // Validacion 2°: Se verifica que el nombre de usuario no exista
         if (nombreExistente) {
-            throw new Error('El nombre de usuario ya está en uso');
+            throw new ConflictError('El nombre de usuario ya está en uso');
         }
 
         const comuna = await comunaRepo.findOne({
             where: { id_comuna }
         });
 
-        // Validacion 3°: Se verifica que el id de la comuna exista
+        // Validacion 3°: Se verifica que el id de la comuna exista (mensaje de error para desarrollo)
         if (!comuna) {
             throw new Error('La comuna no existe');
+        }
+        
+        // Validacion 4°: Se verifica que el contacto no esté en uso
+        if (contacto) {
+            contacto = contacto.trim();
+            const contactoExistente = await usuarioRepo.findOne({
+                where: { contacto }
+            });
+
+            if (contactoExistente) {
+                throw new ConflictError('El contacto ya está en uso');
+            }
         }
 
         const passwordHash = await bcrypt.hash(contraseña, 10);
@@ -63,7 +76,7 @@ export const authService = {
             contraseña: passwordHash,
             nombre_usuario,
             descripcion_perfil: descripcion_perfil ?? '',
-            contacto: contacto ?? '',
+            contacto: contacto || null,
             comuna
         });
 

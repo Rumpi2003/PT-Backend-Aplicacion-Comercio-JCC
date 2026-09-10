@@ -4,24 +4,31 @@ services:
     container_name: ptjcc_db
     restart: unless-stopped
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: PT_JCC
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
     ports:
-      - "5432:5432"
+      - "${DB_PORT}:${DB_PORT}"
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./Backend/initdb/init-postgis.sql:/docker-entrypoint-initdb.d/init-postgis.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
 
   pgadmin:
     image: dpage/pgadmin4:latest
     container_name: ptjcc_pgadmin
     restart: unless-stopped
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@admin.com
-      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
     ports:
       - "5050:80"
     volumes:
@@ -35,17 +42,19 @@ services:
     container_name: ptjcc_backend_dev
     restart: unless-stopped
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     ports:
-      - "3000:3000"
+      - "${PORT}:${PORT}"
     environment:
-      PORT: 3000
-      NODE_ENV: development
-      DB_HOST: db
-      DB_PORT: 5432
-      DB_USER: postgres
-      DB_PASSWORD: postgres
-      DB_NAME: PT_JCC
+      PORT: ${PORT}
+      NODE_ENV: ${NODE_ENV}
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+      JWT_SECRET: ${JWT_SECRET}
     volumes:
       - ./Backend:/app
       - /app/node_modules

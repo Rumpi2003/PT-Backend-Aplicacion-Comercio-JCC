@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import { authService } from '../services/auth.service.js';
 import { sendSuccess, sendError } from '../handlers/responseHandlers.js'
+import { ConflictError } from '../handlers/errorHandlers.js';
 import { RegistrarUsuarioSchema, LoginUsuarioSchema } from '../validations/usuario.validation.js';
 
 export const authController = {
@@ -12,9 +13,13 @@ export const authController = {
         }
         try {
             const result = await authService.register(value);
-            sendSuccess(res, result, 'Usuario Registrado Correctamente');
+            sendSuccess(res, result, 'Usuario Registrado Correctamente', 201);
         } catch (error: any) {
-            sendError(res, 'Error al registrar el usuario', [error.message]);
+            if (error instanceof ConflictError) {
+                sendError(res, 'Conflicto de datos', [error.message], 409);
+            } else {
+                sendError(res, 'Error interno del servidor', [error.message], 500);
+            }
         }
     },
 

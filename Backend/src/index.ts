@@ -7,6 +7,7 @@ import morgan from 'morgan';
 import dotenv from 'dotenv';
 import { AppDataSource } from './config/db.config.js';
 import routerApi from './routes/index.routes.js';
+import swaggerDocs from './utils/swagger.js';
 
 dotenv.config();
 
@@ -30,8 +31,6 @@ const io = new Server(httpServer, {
 });
 
 // Inicializar Base de Datos y Arrancar Servidor
-
-
 AppDataSource.initialize()
     .then(() => {
         console.log('Base de datos inicializada correctamente');
@@ -40,6 +39,9 @@ AppDataSource.initialize()
         httpServer.listen(PORT, () => {
             console.log(`Servidor corriendo en el puerto ${PORT}`);
         });
+
+        // Configurar documentación Swagger
+        swaggerDocs(app, Number(PORT));
     })
     .catch((error) => {
         console.error('Error al inicializar la base de datos:', error);

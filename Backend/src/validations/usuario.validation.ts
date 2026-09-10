@@ -23,7 +23,7 @@ export const RegistrarUsuarioSchema = Joi.object({
         'string.empty': 'El nombre de usuario es obligatorio',
         'any.required': 'El nombre de usuario es obligatorio'
     }),
-    contacto: Joi.string().pattern(formatoContacto).optional().messages({
+    contacto: Joi.string().trim().pattern(formatoContacto).empty('').optional().allow(null).messages({
         'string.pattern.base': 'El contacto debe tener el formato +56XXXXXXXXX'
     }),
     descripcion_perfil: Joi.string().max(255).optional().messages({
