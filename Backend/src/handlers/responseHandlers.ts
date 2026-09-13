@@ -21,7 +21,7 @@ export function sendError(
 ): void {
     res.status(statusCode).json({
         status: 'error',
-        message: Array.isArray(message) ? message : [message],
+        message,
         errors
     });
 }

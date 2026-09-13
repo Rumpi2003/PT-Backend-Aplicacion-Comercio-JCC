@@ -104,7 +104,7 @@ export const authService = {
 
     login: async ({ correo, contraseña }: LoginInput) => {
         if (!correo || !contraseña) {
-            throw new Error('Correo y contraseña son obligatorios');
+            throw new CredentialError('Correo y contraseña son obligatorios');
         }
 
         const correoNormalizado = correo.trim().toLowerCase();
@@ -120,7 +120,7 @@ export const authService = {
         const contraseñaValida = await bcrypt.compare(contraseña, usuario.contraseña);
 
         if (!contraseñaValida) {
-            throw new Error('La contraseña es incorrecta');
+            throw new CredentialError('La contraseña es incorrecta');
         }
 
         const token = jwt.sign(
