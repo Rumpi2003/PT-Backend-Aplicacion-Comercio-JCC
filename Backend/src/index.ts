@@ -8,6 +8,7 @@ import dotenv from 'dotenv';
 import { AppDataSource } from './config/db.config.js';
 import routerApi from './routes/index.routes.js';
 import swaggerDocs from './utils/swagger.js';
+import { seedComunas } from './seeds/comuna.seed.js';
 
 dotenv.config();
 
@@ -32,8 +33,11 @@ const io = new Server(httpServer, {
 
 // Inicializar Base de Datos y Arrancar Servidor
 AppDataSource.initialize()
-    .then(() => {
+    .then(async () => {
         console.log('Base de datos inicializada correctamente');
+
+        // Sembrar comunas
+        await seedComunas();
 
         // Iniciar servidor HTTP / WebSocket solo si conecta la BD
         httpServer.listen(PORT, () => {

@@ -26,10 +26,10 @@ export class Usuario {
     @Column({ type: 'varchar', length: 255, unique: true, nullable: false })
     correo!: string;
 
-    @Column({ type: 'varchar', length: 255, nullable: false })
+    @Column({ type: 'varchar', length: 64, nullable: false })
     contraseña!: string;
 
-    @Column({ type: 'varchar', length: 255, unique: true, nullable: false })
+    @Column({ type: 'varchar', length: 32, unique: true, nullable: false })
     nombre_usuario!: string;
 
     @Column({ type: 'varchar', length: 255, default: '' })

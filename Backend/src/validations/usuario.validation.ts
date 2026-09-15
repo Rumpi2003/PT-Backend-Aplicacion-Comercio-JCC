@@ -5,8 +5,9 @@ const formatoContacto = /^\+56\d{9}$/;
 const complejidadContraseña = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?])/;
 
 export const RegistrarUsuarioSchema = Joi.object({
-    correo: Joi.string().email().required().messages({
+    correo: Joi.string().email().max(255).required().messages({
         'string.email': 'El correo debe tener un formato válido',
+        'string.max': 'El correo no debe exceder los 255 caracteres',
         'string.empty': 'El correo es obligatorio',
         'any.required': 'El correo es obligatorio'
     }),
@@ -38,8 +39,9 @@ export const RegistrarUsuarioSchema = Joi.object({
 })
 
 export const LoginUsuarioSchema = Joi.object({
-    correo: Joi.string().email().required().messages({
+    correo: Joi.string().email().max(255).required().messages({
         'string.email': 'El correo debe tener un formato válido',
+        'string.max': 'El correo no debe exceder los 255 caracteres',
         'string.empty': 'El correo es obligatorio',
         'any.required': 'El correo es obligatorio'
     }),
