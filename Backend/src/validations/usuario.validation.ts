@@ -27,7 +27,7 @@ export const RegistrarUsuarioSchema = Joi.object({
     contacto: Joi.string().trim().pattern(formatoContacto).empty('').optional().allow(null).messages({
         'string.pattern.base': 'El contacto debe tener el formato +56XXXXXXXXX'
     }),
-    descripcion_perfil: Joi.string().max(255).optional().messages({
+    descripcion_perfil: Joi.string().max(255).empty('').optional().allow(null).messages({
         'string.max': 'La descripción del perfil no debe exceder los 255 caracteres'
     }),
     id_comuna: Joi.number().integer().positive().required().messages({
