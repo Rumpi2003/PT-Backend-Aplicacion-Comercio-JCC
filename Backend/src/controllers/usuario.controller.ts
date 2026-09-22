@@ -5,7 +5,7 @@ import { sendSuccess, sendError } from '../handlers/responseHandlers.js'
 export const usuarioController = {
     getPerfilPersonal: async (req: Request, res: Response) => {
         try {
-            const id = Number(req.params.id);
+            const id = Number(req.user?.id_usuario);
             const perfil = await usuarioService.getPerfilPersonal(id);
             sendSuccess(res, perfil);
         } catch (error: any) {
