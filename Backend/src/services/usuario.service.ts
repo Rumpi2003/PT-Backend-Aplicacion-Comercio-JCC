@@ -1,7 +1,7 @@
 import { AppDataSource } from "../config/db.config.js"
 import { Usuario } from "../entities/usuario.entity.js"
 
-export const perfilService = {
+export const usuarioService = {
     getPerfilPersonal: async (id: number) => {
         const repo = AppDataSource.getRepository(Usuario);
         const usuario = await repo.findOne({
@@ -16,7 +16,7 @@ export const perfilService = {
         const perfil = {
             comuna: usuario.comuna,
             correo: usuario.correo,
-            nombre: usuario.nombre_usuario,
+            nombre_usuario: usuario.nombre_usuario,
             descripcion_perfil: usuario.descripcion_perfil,
             contacto: usuario.contacto,
             puntuacion_promedio: usuario.puntuacion_promedio,
