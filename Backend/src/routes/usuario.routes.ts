@@ -6,4 +6,8 @@ const router = Router();
 
 router.get('/perfil_personal', authMiddleware, usuarioController.getPerfilPersonal);
 
+router.put('/descripcion', authMiddleware, usuarioController.updateDescripcion);
+
+router.put('/comuna', authMiddleware, usuarioController.updateComuna);
+
 export default router;

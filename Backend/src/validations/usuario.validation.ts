@@ -51,3 +51,20 @@ export const LoginUsuarioSchema = Joi.object({
         'any.required': 'La contraseña es obligatoria'
     })
 })
+
+export const UpdateDescripcionSchema = Joi.object({
+    descripcion_perfil: Joi.string().max(255).required().messages({
+        'string.max': 'La descripción del perfil no debe exceder los 255 caracteres',
+        'string.empty': 'La descripción del perfil es obligatoria',
+        'any.required': 'La descripción del perfil es obligatoria'
+    })
+});
+
+export const UpdateComunaSchema = Joi.object({
+    id_comuna: Joi.number().integer().positive().required().messages({
+        'number.base': 'El id de la comuna debe ser un número',
+        'number.integer': 'El id de la comuna debe ser un número entero',
+        'number.positive': 'El id de la comuna debe ser un número positivo',
+        'any.required': 'El id de la comuna es obligatorio'
+    })
+});

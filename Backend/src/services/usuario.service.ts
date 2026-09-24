@@ -26,5 +26,39 @@ export const usuarioService = {
         };
 
         return perfil;
+    },
+
+    updateDescripcion: async (id: number, descripcion: string) => {
+        const repo = AppDataSource.getRepository(Usuario);
+        const usuario = await repo.findOne({
+            where: { id_usuario: id }
+        });
+
+        if (!usuario) {
+            throw new Error('Usuario no encontrado');
+        }
+
+        usuario.descripcion_perfil = descripcion;
+        await repo.save(usuario);
+        return {
+            descripcion_perfil: usuario.descripcion_perfil
+        };
+    },
+
+    updateComuna: async (id: number, id_comuna: number) => {
+        const repo = AppDataSource.getRepository(Usuario);
+        const usuario = await repo.findOne({
+            where: { id_usuario: id }
+        });
+
+        if (!usuario) {
+            throw new Error('Usuario no encontrado');
+        }
+
+        usuario.comuna = { id_comuna: id_comuna } as any;
+        await repo.save(usuario);
+        return {
+            comuna: usuario.comuna
+        };
     }
 }
