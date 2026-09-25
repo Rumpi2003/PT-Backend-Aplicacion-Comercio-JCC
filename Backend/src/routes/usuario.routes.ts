@@ -10,4 +10,8 @@ router.put('/descripcion', authMiddleware, usuarioController.updateDescripcion);
 
 router.put('/comuna', authMiddleware, usuarioController.updateComuna);
 
+router.put('/radio_geo', authMiddleware, usuarioController.updateRadioGeo);
+
+router.put('/visibilidad_perfil', authMiddleware, usuarioController.updateVisibilidadPerfil);
+
 export default router;

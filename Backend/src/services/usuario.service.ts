@@ -1,5 +1,6 @@
 import { AppDataSource } from "../config/db.config.js"
 import { Usuario } from "../entities/usuario.entity.js"
+import { Comuna } from "../entities/comuna.entity.js"
 
 export const usuarioService = {
     getPerfilPersonal: async (id: number) => {
@@ -47,6 +48,16 @@ export const usuarioService = {
 
     updateComuna: async (id: number, id_comuna: number) => {
         const repo = AppDataSource.getRepository(Usuario);
+        const comunaRepo = AppDataSource.getRepository(Comuna);
+
+        const comuna = await comunaRepo.findOne({
+            where: { id_comuna: id_comuna }
+        });
+
+        if (!comuna) {
+            throw new Error('Comuna no encontrada');
+        }
+
         const usuario = await repo.findOne({
             where: { id_usuario: id }
         });
@@ -55,10 +66,42 @@ export const usuarioService = {
             throw new Error('Usuario no encontrado');
         }
 
-        usuario.comuna = { id_comuna: id_comuna } as any;
+        usuario.comuna = comuna;
+        await repo.save(usuario);
+        return comuna;
+    },
+
+    updateRadioGeo: async (id: number, radio_geo: number) => {
+        const repo = AppDataSource.getRepository(Usuario);
+        const usuario = await repo.findOne({
+            where: { id_usuario: id }
+        });
+
+        if (!usuario) {
+            throw new Error('Usuario no encontrado');
+        }
+
+        usuario.radio_geo = radio_geo;
         await repo.save(usuario);
         return {
-            comuna: usuario.comuna
+            radio_geo: usuario.radio_geo
+        };
+    },
+
+    updateVisibilidadPerfil: async (id: number, visibilidad_perfil: boolean) => {
+        const repo = AppDataSource.getRepository(Usuario);
+        const usuario = await repo.findOne({
+            where: { id_usuario: id }
+        });
+
+        if (!usuario) {
+            throw new Error('Usuario no encontrado');
+        }
+
+        usuario.visibilidad_perfil = visibilidad_perfil;
+        await repo.save(usuario);
+        return {
+            visibilidad_perfil: usuario.visibilidad_perfil
         };
     }
 }

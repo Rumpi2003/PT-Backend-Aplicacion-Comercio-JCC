@@ -3,6 +3,8 @@ import Joi from 'joi';
 // Se limita al país de Chile, formato +56XXXXXXXXX
 const formatoContacto = /^\+56\d{9}$/;
 const complejidadContraseña = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?])/;
+const minRadioGeo = 200; // Valor mínimo para el radio geográfico
+const maxRadioGeo = 2000; // Valor máximo para el radio geográfico
 
 export const RegistrarUsuarioSchema = Joi.object({
     correo: Joi.string().email().max(255).required().messages({
@@ -68,3 +70,22 @@ export const UpdateComunaSchema = Joi.object({
         'any.required': 'El id de la comuna es obligatorio'
     })
 });
+
+export const UpdateRadioGeoSchema = Joi.object({
+    radio_geo: Joi.number().integer().positive().min(minRadioGeo).max(maxRadioGeo).required().messages({
+        'number.base': 'El radio geográfico debe ser un número',
+        'number.integer': 'El radio geográfico debe ser un número entero',
+        'number.positive': 'El radio geográfico debe ser un número positivo',
+        'number.min': `El radio geográfico no debe ser menor a ${minRadioGeo} metros`,
+        'number.max': `El radio geográfico no debe exceder los ${maxRadioGeo} metros`,
+        'any.required': 'El radio geográfico es obligatorio'
+    })
+});
+
+export const UpdateVisibilidadPerfilSchema = Joi.object({
+    visibilidad_perfil: Joi.boolean().required().messages({
+        'boolean.base': 'La visibilidad del perfil debe ser un valor booleano',
+        'any.required': 'La visibilidad del perfil es obligatoria'
+    })
+});
+    
