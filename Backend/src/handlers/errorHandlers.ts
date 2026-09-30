@@ -15,3 +15,12 @@ export class CredentialError extends Error {
         this.name = 'CredentialError';
     }
 }
+
+export class ExternalApiError extends Error {
+    statusCode = 502;
+
+    constructor(message: string) {
+        super(message);
+        this.name = 'ExternalApiError';
+    }
+}

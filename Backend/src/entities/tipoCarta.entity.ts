@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, Column, OneToMany, ManyToOne, JoinColumn, PrimaryColumn } from 'typeorm';
 import { Franquicia } from './franquicia.entity.js';
 import { Franquicia as FranquiciaType } from './franquicia.entity.js';
 import { CartaDeseada } from './cartaDeseada.entity.js';
@@ -8,7 +8,7 @@ import { CartaOfrecida as CartaOfrecidaType } from './cartaOfrecida.entity.js';
 
 @Entity({ name: 'tipo_carta' })
 export class TipoCarta {
-    @PrimaryGeneratedColumn({ name: 'id_tipo_carta', type: 'int' })
+    @PrimaryColumn({ name: 'id_tipo_carta', type: 'int' })
     id_tipo_carta!: number;
 
     @ManyToOne(() => Franquicia, (franquicia) => franquicia.cartas, { nullable: false, onDelete: 'RESTRICT', onUpdate: 'CASCADE' })

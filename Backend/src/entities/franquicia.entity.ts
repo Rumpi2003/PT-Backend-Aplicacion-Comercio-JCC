@@ -7,7 +7,7 @@ export class Franquicia {
     @PrimaryGeneratedColumn({ name: 'id_franquicia', type: 'int' })
     id_franquicia!: number;
 
-    @Column({ type: 'varchar', length: 255 })
+    @Column({ type: 'varchar', length: 255, unique: true })
     nombre_franquicia!: string;
 
     @OneToMany(() => TipoCarta, (tipoCarta) => tipoCarta.franquicia)

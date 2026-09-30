@@ -55,6 +55,8 @@ services:
       DB_PASSWORD: ${DB_PASSWORD}
       DB_NAME: ${DB_NAME}
       JWT_SECRET: ${JWT_SECRET}
+      TCG_API_URL: ${TCG_API_URL}
+      TCG_API_KEY: ${TCG_API_KEY}
     volumes:
       - ./Backend:/app
       - /app/node_modules

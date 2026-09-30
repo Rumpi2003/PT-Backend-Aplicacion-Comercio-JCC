@@ -16,7 +16,7 @@ export const authController = {
             sendSuccess(res, result, 'Usuario Registrado Correctamente', 201);
         } catch (error: any) {
             if (error instanceof ConflictError) {
-                sendError(res, 'Conflicto de datos', [error.message], 409);
+                sendError(res, 'Conflicto de datos', [error.message], error.statusCode);
             } else {
                 sendError(res, 'Error interno del servidor', [error.message], 500);
             }
@@ -34,7 +34,7 @@ export const authController = {
             sendSuccess(res, result);
         } catch (error: any) {
             if (error instanceof CredentialError) {
-                sendError(res, 'Credenciales incorrectas', [error.message], 401);
+                sendError(res, 'Credenciales incorrectas', [error.message], error.statusCode);
             } else {
                 sendError(res, 'Error interno del servidor', [error.message], 500);
             }
