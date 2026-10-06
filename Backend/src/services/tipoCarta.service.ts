@@ -3,7 +3,7 @@ import { TipoCarta } from '../entities/tipoCarta.entity.js';
 import { Franquicia } from '../entities/franquicia.entity.js';
 import { tcgApiService } from './tcgApi.service.js';
 
-export const tipoCartaService = {
+/**export const tipoCartaService = {
     obtenerOCrearDesdeExterna: async (idExterno: number) => {
         const tipoCartaRepo = AppDataSource.getRepository(TipoCarta);
 
@@ -31,4 +31,4 @@ export const tipoCartaService = {
 
         return await tipoCartaRepo.save(nueva);
     }
-};
+};*/
