@@ -64,10 +64,10 @@ export const tcgApiService = {
         return body.data.map(mapearTcg);
     },
 
-    listarSets: async (tcg: string): Promise<SetExternoListado> => {
+    listarSets: async (tcg: string, sortBy: string = 'release_date', sortOrder: string = 'desc'): Promise<SetExternoListado> => {
         const query = new URLSearchParams({
-            sortBy: 'release_date',
-            sortOrder: 'desc'
+            sortBy: sortBy,
+            sortOrder: sortOrder
         });
         let statusCode: number;
         let body: any;

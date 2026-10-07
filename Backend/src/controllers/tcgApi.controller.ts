@@ -24,9 +24,9 @@ export const tcgApiController = {
             sendError(res, 'Datos inválidos', error.details.map(detail => detail.message), 400);
             return;
         }
-        const { tcg } = value;
+        const { tcg, sortBy, sortOrder } = value;
         try {
-            const sets = await tcgApiService.listarSets(tcg);
+            const sets = await tcgApiService.listarSets(tcg, sortBy, sortOrder);
             sendSuccess(res, sets, 'Sets encontrados');
         } catch (error: any) {
             if (error instanceof ExternalApiError) {

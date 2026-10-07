@@ -13,7 +13,7 @@ export const BuscarCartaSchema = Joi.object({
     }),
     sortBy: Joi.string().trim().min(1).max(255).optional().valid('name').messages({
         'string.empty': 'El criterio de orden no puede estar vacío',
-        'any.only': 'El criterio de orden debe ser "name" o "release_date"'
+        'any.only': 'El criterio de orden debe ser "name"'
     }),
     sortOrder: Joi.string().trim().min(1).max(255).optional().valid('asc', 'desc').messages({
         'string.empty': 'El orden de clasificación no puede estar vacío',
@@ -27,5 +27,13 @@ export const ListarSetsSchema = Joi.object({
     tcg: Joi.string().trim().min(1).max(255).required().messages({
         'string.empty': 'El TCG es obligatorio',
         'any.required': 'El TCG es obligatorio'
+    }),
+    sortBy: Joi.string().trim().min(1).max(255).optional().valid('name', 'release_date').messages({
+        'string.empty': 'El criterio de orden no puede estar vacío',
+        'any.only': 'El criterio de orden debe ser "name" o "release_date"'
+    }),
+    sortOrder: Joi.string().trim().min(1).max(255).optional().valid('asc', 'desc').messages({
+        'string.empty': 'El orden de clasificación no puede estar vacío',
+        'any.only': 'El orden de clasificación debe ser "asc" o "desc"'
     })
 });
