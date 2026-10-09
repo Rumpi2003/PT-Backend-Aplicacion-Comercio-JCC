@@ -9,6 +9,7 @@ import { AppDataSource } from './config/db.config.js';
 import routerApi from './routes/index.routes.js';
 import swaggerDocs from './utils/swagger.js';
 import { seedComunas } from './seeds/comuna.seed.js';
+import { seedFranquicias } from './seeds/franquicia.seed.js';
 
 dotenv.config();
 
@@ -38,6 +39,13 @@ AppDataSource.initialize()
 
         // Sembrar comunas
         await seedComunas();
+        
+        // Sembrar franquicias (Api externa)
+        try {
+            await seedFranquicias();
+        } catch (error) {
+            console.error('No se pudieron sembrar las franquicias, el servidor continuará:', error);
+        }
 
         // Iniciar servidor HTTP / WebSocket solo si conecta la BD
         httpServer.listen(PORT, () => {

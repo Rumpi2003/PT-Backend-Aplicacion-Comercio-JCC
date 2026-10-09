@@ -131,4 +131,31 @@ export const tcgApiService = {
             total: body.total
         };
     },
+
+    obtenerCartaPorId: async (id:number): Promise<CartaExterna> => {
+        let statusCode: number;
+        let body: any;
+
+        try {
+            const response = await tcgApiPool.request({
+                path: `${tcgApiBasePath}/products/${id}`,
+                method: 'GET',
+                headers: tcgApiHeaders
+            });
+            statusCode = response.statusCode;
+            body = await response.body.json() as CartaExternaRespuestaDTO;
+        } catch (error: any) {
+            throw new ExternalApiError(`Error al comunicarse con la API externa: ${error.message}`);
+        }
+
+        if (statusCode === 404) {
+            throw new ExternalApiError(`Carta no encontrada: ${id}`);
+        }
+
+        if (statusCode !== 200) {
+            throw new ExternalApiError(`Error en la API externa: ${statusCode}`);
+        }
+
+        return mapearCarta(body.data);
+    }
 };

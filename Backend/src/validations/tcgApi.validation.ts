@@ -1,12 +1,8 @@
 import Joi from 'joi';
 
 export const BuscarCartaSchema = Joi.object({
-    tcg_id: Joi.string().trim().min(1).max(255).optional().messages({
-        'string.empty': 'El ID del TCG no puede estar vacío'
-    }),
-    set_id: Joi.string().trim().min(1).max(255).optional().messages({
-        'string.empty': 'El ID del set no puede estar vacío'
-    }),
+    tcg_id: Joi.string().trim().min(1).max(255).optional().allow(''),
+    set_id: Joi.string().trim().min(1).max(255).optional().allow(''),
     nombre: Joi.string().trim().min(1).max(255).required().messages({
         'string.empty': 'El nombre de la carta es obligatorio',
         'any.required': 'El nombre de la carta es obligatorio'
@@ -19,7 +15,7 @@ export const BuscarCartaSchema = Joi.object({
         'string.empty': 'El orden de clasificación no puede estar vacío',
         'any.only': 'El orden de clasificación debe ser "asc" o "desc"'
     }),
-    pagina: Joi.number().integer().min(1).default(1),
+    pagina: Joi.number().integer().min(1).max(999).default(1),
     limite: Joi.number().integer().min(1).max(50).default(10)
 });
 
