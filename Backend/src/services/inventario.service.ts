@@ -119,5 +119,52 @@ export const inventarioService = {
             idioma: guardada.idioma,
             cantidad: guardada.cantidad
         };
+    },
+
+    obtenerInventario: async (idUsuario: number) => {
+        const repo = AppDataSource.getRepository(CartaOfrecida);
+        const cartas = await repo.find({
+            where: { usuario: { id_usuario: idUsuario } },
+            relations: { tipo_carta: { franquicia: true } },
+            order: { tipo_carta: { nombre_carta: 'ASC' } }
+        });
+
+        return cartas.map(carta => ({
+            id_carta_ofrecida: carta.id_carta_ofrecida,
+            id_tipo_carta: carta.tipo_carta.id_tipo_carta,
+            nombre_carta: carta.tipo_carta.nombre_carta,
+            rareza: carta.tipo_carta.rareza,
+            set: carta.tipo_carta.set,
+            url_imagen: carta.tipo_carta.url_imagen,
+            url_miniatura: carta.tipo_carta.url_miniatura,
+            franquicia: carta.tipo_carta.franquicia.nombre_franquicia,
+            estado: carta.estado,
+            idioma: carta.idioma,
+            precio: carta.precio,
+            cantidad: carta.cantidad
+        }));
+    },
+
+    obtenerListaDeseos: async (idUsuario: number) => {
+        const repo = AppDataSource.getRepository(CartaDeseada);
+        const cartas = await repo.find({
+            where: { usuario: { id_usuario: idUsuario } },
+            relations: { tipo_carta: { franquicia: true } },
+            order: { tipo_carta: { nombre_carta: 'ASC' } }
+        });
+
+        return cartas.map(carta => ({
+            id_carta_deseada: carta.id_carta_deseada,
+            id_tipo_carta: carta.tipo_carta.id_tipo_carta,
+            nombre_carta: carta.tipo_carta.nombre_carta,
+            rareza: carta.tipo_carta.rareza,
+            set: carta.tipo_carta.set,
+            url_imagen: carta.tipo_carta.url_imagen,
+            url_miniatura: carta.tipo_carta.url_miniatura,
+            franquicia: carta.tipo_carta.franquicia.nombre_franquicia,
+            estado_minimo: carta.estado_minimo,
+            idioma: carta.idioma,
+            cantidad: carta.cantidad
+        }));
     }
 };

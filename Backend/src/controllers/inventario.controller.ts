@@ -42,5 +42,25 @@ export const inventarioController = {
                 sendError(res, 'Error interno del servidor', [error.message], 500);
             }
         }
+    },
+
+    obtenerInventario: async (req: Request, res: Response) => {
+        try {
+            const id = Number(req.user?.id_usuario);
+            const inventario = await inventarioService.obtenerInventario(id);
+            sendSuccess(res, inventario, 'Inventario obtenido con éxito', 200);
+        } catch (error: any) {
+            sendError(res, 'Error interno del servidor', [error.message], 500);
+        }
+    },
+
+    obtenerListaDeseos: async (req: Request, res: Response) => {
+        try {
+            const id = Number(req.user?.id_usuario);
+            const lista = await inventarioService.obtenerListaDeseos(id);
+            sendSuccess(res, lista, 'Lista de deseos obtenida con éxito', 200);
+        } catch (error: any) {
+            sendError(res, 'Error interno del servidor', [error.message], 500);
+        }
     }
 }

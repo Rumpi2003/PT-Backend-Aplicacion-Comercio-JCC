@@ -6,5 +6,8 @@ const router = Router();
 
 router.post('/ofrecidas', authMiddleware, inventarioController.agregarCartaOfrecida);
 router.post('/deseadas', authMiddleware, inventarioController.agregarCartaDeseada);
+router.get('/ofrecidas', authMiddleware, inventarioController.obtenerInventario);
+router.get('/deseadas', authMiddleware, inventarioController.obtenerListaDeseos);
+
 
 export default router;
