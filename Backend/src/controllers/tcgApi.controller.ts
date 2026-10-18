@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import { tcgApiService } from '../services/tcgApi.service.js';
+import { franquiciaService } from '../services/franquicia.service.js';
 import { sendSuccess, sendError } from '../handlers/responseHandlers.js';
 import { ExternalApiError } from '../handlers/errorHandlers.js';
 import { BuscarCartaSchema, ListarSetsSchema } from '../validations/tcgApi.validation.js';
@@ -7,7 +8,10 @@ import { BuscarCartaSchema, ListarSetsSchema } from '../validations/tcgApi.valid
 export const tcgApiController = {
     listarTcgs: async (req: Request, res: Response) => {
         try {
-            const tcgs = await tcgApiService.listarTcgs();
+            let tcgs = await franquiciaService.listarFranquicias();
+            if (tcgs.length === 0) {
+                tcgs = await tcgApiService.listarTcgs();
+            }
             sendSuccess(res, tcgs, 'TCGs encontrados');
         } catch (error: any) {
             if (error instanceof ExternalApiError) {
