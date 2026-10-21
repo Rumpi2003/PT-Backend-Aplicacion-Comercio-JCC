@@ -55,3 +55,21 @@ export const AgregarCartaDeseadaSchema = Joi.object({
         'number.max': 'La cantidad no puede exceder los 999'
     })
 });
+
+export const ObtenerInventarioQuerySchema = Joi.object({
+    sortBy: Joi.string().valid('nombre_carta', 'precio', 'franquicia').default('nombre_carta').messages({
+        'any.only': 'sortBy debe ser nombre_carta, precio o franquicia'
+    }),
+    sortOrder: Joi.string().uppercase().valid('ASC', 'DESC').default('ASC').messages({
+        'any.only': 'sortOrder debe ser ASC o DESC'
+    })
+});
+
+export const ObtenerListaDeseosQuerySchema = Joi.object({
+    sortBy: Joi.string().valid('nombre_carta', 'franquicia').default('nombre_carta').messages({
+        'any.only': 'sortBy debe ser nombre_carta o franquicia'
+    }),
+    sortOrder: Joi.string().uppercase().valid('ASC', 'DESC').default('ASC').messages({
+        'any.only': 'sortOrder debe ser ASC o DESC'
+    })
+});

@@ -6,6 +6,9 @@ import { CartaOfrecida, type Estado } from '../entities/cartaOfrecida.entity.js'
 import { CartaDeseada, EstadoMin } from '../entities/cartaDeseada.entity.js';
 import type { Usuario } from '../entities/usuario.entity.js';
 
+export type SortBy = 'nombre_carta' | 'precio' | 'franquicia';
+export type SortOrder = 'ASC' | 'DESC';
+
 export const inventarioService = {
     obtenerOCrear: async (idExterno: number): Promise<TipoCarta> => {
         const tipoCartaRepo = AppDataSource.getRepository(TipoCarta);
@@ -121,12 +124,16 @@ export const inventarioService = {
         };
     },
 
-    obtenerInventario: async (idUsuario: number) => {
+    obtenerInventario: async (idUsuario: number, sortBy: SortBy = 'nombre_carta', sortOrder: SortOrder = 'ASC') => {
         const repo = AppDataSource.getRepository(CartaOfrecida);
+        const order =
+            sortBy === 'precio' ? { precio: sortOrder }
+            : sortBy === 'franquicia' ? { tipo_carta: { franquicia: { nombre_franquicia: sortOrder } } }
+            : { tipo_carta: { [sortBy]: sortOrder } };
         const cartas = await repo.find({
             where: { usuario: { id_usuario: idUsuario } },
             relations: { tipo_carta: { franquicia: true } },
-            order: { tipo_carta: { nombre_carta: 'ASC' } }
+            order: order
         });
 
         return cartas.map(carta => ({
@@ -145,12 +152,15 @@ export const inventarioService = {
         }));
     },
 
-    obtenerListaDeseos: async (idUsuario: number) => {
+    obtenerListaDeseos: async (idUsuario: number, sortBy: Exclude<SortBy, 'precio'> = 'nombre_carta', sortOrder: SortOrder = 'ASC') => {
         const repo = AppDataSource.getRepository(CartaDeseada);
+        const order = sortBy === 'franquicia'
+            ? { tipo_carta: { franquicia: { nombre_franquicia: sortOrder } } }
+            : { tipo_carta: { nombre_carta: sortOrder } };
         const cartas = await repo.find({
             where: { usuario: { id_usuario: idUsuario } },
             relations: { tipo_carta: { franquicia: true } },
-            order: { tipo_carta: { nombre_carta: 'ASC' } }
+            order: order
         });
 
         return cartas.map(carta => ({
