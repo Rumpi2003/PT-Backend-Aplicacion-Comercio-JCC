@@ -73,3 +73,47 @@ export const ObtenerListaDeseosQuerySchema = Joi.object({
         'any.only': 'sortOrder debe ser ASC o DESC'
     })
 });
+
+export const IdCartaOfrecidaSchema = Joi.number().integer().positive().required().messages({
+    'any.required': 'El id de la carta ofrecida es obligatorio',
+    'number.base': 'El id de la carta ofrecida debe ser un número',
+    'number.integer': 'El id de la carta ofrecida debe ser un número entero',
+    'number.positive': 'El id de la carta ofrecida debe ser un número positivo'
+});
+
+export const ModificarCartaOfrecidaSchema = Joi.object({
+    estado: Joi.string().valid(...Object.values(Estado)).optional().messages({
+        'any.only': 'El estado no es válido'
+    }),
+    idioma: Joi.string().valid(...Object.values(Idioma)).optional().messages({
+        'any.only': 'El idioma no es válido'
+    }),
+    precio: Joi.number().integer().min(0).optional().messages({
+        'number.min': 'El precio no puede ser negativo',
+        'number.base': 'El precio debe ser un número'
+    }),
+    cantidad: Joi.number().integer().min(1).max(999).optional().messages({
+        'number.min': 'La cantidad debe ser al menos 1',
+        'number.max': 'La cantidad no puede exceder los 999'
+    })
+}).min(1);
+
+export const IdCartaDeseadaSchema = Joi.number().integer().positive().required().messages({
+    'any.required': 'El id de la carta deseada es obligatorio',
+    'number.base': 'El id de la carta deseada debe ser un número',
+    'number.integer': 'El id de la carta deseada debe ser un número entero',
+    'number.positive': 'El id de la carta deseada debe ser un número positivo'
+});
+
+export const ModificarCartaDeseadaSchema = Joi.object({
+    estado_minimo: Joi.string().valid(...Object.values(Estado)).optional().messages({
+        'any.only': 'El estado mínimo no es válido'
+    }),
+    idioma: Joi.string().valid(...Object.values(Idioma)).optional().messages({
+        'any.only': 'El idioma no es válido'
+    }),
+    cantidad: Joi.number().integer().min(1).max(999).optional().messages({
+        'number.min': 'La cantidad debe ser al menos 1',
+        'number.max': 'La cantidad no puede exceder los 999'
+    })
+}).min(1);

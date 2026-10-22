@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, OneToMany, Unique, DeleteDateColumn } from 'typeorm';
 import { Usuario } from './usuario.entity.js';
 import { Usuario as UsuarioType } from './usuario.entity.js';
 import { TipoCarta } from './tipoCarta.entity.js';
@@ -15,6 +15,8 @@ export enum Estado {
     DAÑADA = 'DAÑADA',
     DESTRUIDA = 'DESTRUIDA'
 }
+
+@Unique(['usuario', 'tipo_carta', 'estado', 'idioma'])
 @Entity({ name: 'carta_ofrecida' })
 export class CartaOfrecida {
     @PrimaryGeneratedColumn({ name: 'id_carta_ofrecida', type: 'int' })
@@ -42,4 +44,7 @@ export class CartaOfrecida {
 
     @OneToMany(() => DetalleTransaccion, (detalleTransaccion) => detalleTransaccion.carta_ofrecida, { nullable: true })
     detalles_transaccion!: DetalleTransaccionType[];
+
+    @DeleteDateColumn({ name: 'fecha_eliminacion', nullable: true })
+    fecha_eliminacion?: Date | null;
 }

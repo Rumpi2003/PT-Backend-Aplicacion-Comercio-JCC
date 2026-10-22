@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, Unique } from 'typeorm';
 import { TipoCarta } from './tipoCarta.entity.js';
 import { TipoCarta as TipoCartaType } from './tipoCarta.entity.js';
 import { Usuario } from './usuario.entity.js';
@@ -13,6 +13,8 @@ export enum EstadoMin {
     DAÑADA = 'DAÑADA',
     DESTRUIDA = 'DESTRUIDA'
 }
+
+@Unique(['usuario', 'tipo_carta', 'estado_minimo', 'idioma'])
 @Entity({ name: 'carta_deseada' })
 export class CartaDeseada {
     @PrimaryGeneratedColumn({ name: 'id_carta_deseada', type: 'int' })
