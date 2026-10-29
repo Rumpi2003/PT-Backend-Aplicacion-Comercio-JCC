@@ -4,6 +4,7 @@ import usuarioRoutes from './usuario.routes.js'
 import comunaRoutes from './comuna.routes.js'
 import tcgApiRoutes from './tcgApi.routes.js';
 import inventarioRoutes from './inventario.routes.js';
+import emparejamientoRoutes from './emparejamiento.routes.js';
 
 export default function routerApi(app: Application) {
     const router = Router();
@@ -14,4 +15,5 @@ export default function routerApi(app: Application) {
     router.use('/comunas', comunaRoutes);
     router.use('/tcgApi', tcgApiRoutes);
     router.use('/inventario', inventarioRoutes);
+    router.use('/emparejamientos', emparejamientoRoutes);
 }
