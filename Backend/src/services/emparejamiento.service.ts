@@ -102,6 +102,16 @@ export interface ContextoPuntuacion {
 
 const acotar = (x: number): number => Math.min(1, Math.max(0, x));
 
+const UMBRALES_DISTANCIA_M = [100] as const;
+
+export const ocultarDistancia = (distanciaM: number | null) => {
+    if (distanciaM === null) return { distancia_m: null, distancia_aproximada: false };
+    const umbral = UMBRALES_DISTANCIA_M.find(u => distanciaM <= u);
+    return umbral !== undefined
+        ? { distancia_m: umbral, distancia_aproximada: true }
+        : { distancia_m: Math.round(distanciaM), distancia_aproximada: false };
+};
+
 /** Reparte unidades sin contar dos veces una misma carta ofrecida ni una misma necesidad. */
 function asignarUnidades<T extends ParCompatible>(pares: T[]): Asignacion<T>[] {
     const demanda = new Map<number, number>();
@@ -404,7 +414,7 @@ export const emparejamientoService = {
                     comuna: c.usuario.comuna.nombre_comuna
                 },
                 puntuacion: c.puntuacion,
-                distancia_m: c.datos.distanciaM,
+                ...ocultarDistancia(c.datos.distanciaM),
                 cartas_coincidentes: c.directas.map(a => ({
                     id_carta_ofrecida: a.par.id_carta_ofrecida,
                     id_tipo_carta: a.par.id_tipo_carta,
