@@ -41,7 +41,7 @@ export class Usuario {
     @Column({ type: 'float', default: 0 })
     puntuacion_promedio!: number;
 
-    @Column({ type: 'int', default: 0 })
+    @Column({ type: 'int', default: 2000 })
     radio_geo!: number;
 
     @Column({ type: 'geography', spatialFeatureType: 'Point', srid: 4326, nullable: true, default: null })

@@ -14,4 +14,10 @@ router.put('/radio_geo', authMiddleware, usuarioController.updateRadioGeo);
 
 router.put('/visibilidad_perfil', authMiddleware, usuarioController.updateVisibilidadPerfil);
 
+router.get('/modo_geo', authMiddleware, usuarioController.getModoGeo);
+
+router.put('/modo_geo', authMiddleware, usuarioController.updateModoGeo);
+
+router.put('/ubicacion', authMiddleware, usuarioController.updateUbicacion);
+
 export default router;

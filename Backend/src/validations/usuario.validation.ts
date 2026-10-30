@@ -88,4 +88,26 @@ export const UpdateVisibilidadPerfilSchema = Joi.object({
         'any.required': 'La visibilidad del perfil es obligatoria'
     })
 });
+
+export const UpdateModoGeoSchema = Joi.object({
+    modo_geo_activado: Joi.boolean().required().messages({
+        'boolean.base': 'El modo geográfico debe ser un valor booleano',
+        'any.required': 'El modo geográfico es obligatorio'
+    })
+});
+
+export const UpdateUbicacionSchema = Joi.object({
+    latitud: Joi.number().min(-90).max(90).required().messages({
+        'number.base': 'La latitud debe ser un número',
+        'number.min': 'La latitud debe estar entre -90 y 90',
+        'number.max': 'La latitud debe estar entre -90 y 90',
+        'any.required': 'La latitud es obligatoria'
+    }),
+    longitud: Joi.number().min(-180).max(180).required().messages({
+        'number.base': 'La longitud debe ser un número',
+        'number.min': 'La longitud debe estar entre -180 y 180',
+        'number.max': 'La longitud debe estar entre -180 y 180',
+        'any.required': 'La longitud es obligatoria'
+    })
+});
     
