@@ -38,8 +38,16 @@ export class Transaccion {
     @Column({ type: 'enum', enum: estadoTransaccion, default: estadoTransaccion.EN_NEGOCIACION })
     estado!: estadoTransaccion;
 
+    // Usuario que debe responder la oferta vigente; null en transacciones antiguas equivale al destinatario (usuario_2)
+    @Column({ name: 'id_usuario_turno', type: 'int', nullable: true })
+    id_usuario_turno!: number | null;
+
     @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
     fecha_creacion!: Date;
+
+    // Última vez que cambió el estado; define cuándo vence una transacción sin respuesta
+    @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+    fecha_estado!: Date;
 
     @OneToOne(() => Reporte, (reporte) => reporte.transaccion, { nullable: true, onDelete: 'SET NULL', onUpdate: 'CASCADE' })
     @JoinColumn({ name: 'id_reporte' })

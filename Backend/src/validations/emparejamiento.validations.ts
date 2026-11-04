@@ -4,6 +4,9 @@ export const ObtenerEmparejamientosQuerySchema = Joi.object({
     usarGeolocalizacion: Joi.boolean().optional().messages({
         'boolean.base': 'usarGeolocalizacion debe ser true o false'
     }),
+    soloMiComuna: Joi.boolean().default(false).messages({
+        'boolean.base': 'soloMiComuna debe ser true o false'
+    }),
     limite: Joi.number().integer().min(1).max(100).default(20).messages({
         'number.base': 'El límite debe ser un número',
         'number.integer': 'El límite debe ser un número entero',

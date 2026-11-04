@@ -10,6 +10,7 @@ import routerApi from './routes/index.routes.js';
 import swaggerDocs from './utils/swagger.js';
 import { seedComunas } from './seeds/comuna.seed.js';
 import { seedFranquicias } from './seeds/franquicia.seed.js';
+import { iniciarExpiracionTransacciones } from './services/transaccion.service.js';
 
 dotenv.config();
 
@@ -46,6 +47,9 @@ AppDataSource.initialize()
         } catch (error) {
             console.error('No se pudieron sembrar las franquicias, el servidor continuará:', error);
         }
+
+        // Cancelar periódicamente las transacciones vencidas
+        iniciarExpiracionTransacciones();
 
         // Iniciar servidor HTTP / WebSocket solo si conecta la BD
         httpServer.listen(PORT, () => {

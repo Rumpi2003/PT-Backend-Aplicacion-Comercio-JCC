@@ -5,11 +5,34 @@ import { tcgApiService } from './tcgApi.service.js';
 import { CartaOfrecida, type Estado } from '../entities/cartaOfrecida.entity.js';
 import { CartaDeseada, EstadoMin } from '../entities/cartaDeseada.entity.js';
 import type { Usuario } from '../entities/usuario.entity.js';
-import { Not } from 'typeorm';
+import { Not, type EntityManager } from 'typeorm';
 import { NotFoundError, ConflictError } from '../handlers/errorHandlers.js'
+import { ESTADOS_RESERVA_SQL } from './stock.sql.js';
 
 export type SortBy = 'nombre_carta' | 'precio' | 'franquicia';
 export type SortOrder = 'ASC' | 'DESC';
+
+/**
+ * Bloquea la carta del usuario (FOR UPDATE) y devuelve las unidades comprometidas en transacciones PENDIENTE.
+ * El bloqueo serializa la edición con otras operaciones que reservan stock sobre la misma carta.
+ */
+async function bloquearYObtenerReservada(manager: EntityManager, idUsuario: number, idCartaOfrecida: number): Promise<number> {
+    const bloqueada: any[] = await manager.query(
+        `SELECT 1 FROM carta_ofrecida
+         WHERE id_carta_ofrecida = $1 AND id_usuario = $2 AND fecha_eliminacion IS NULL
+         FOR UPDATE`,
+        [idCartaOfrecida, idUsuario]
+    );
+    if (bloqueada.length === 0) throw new NotFoundError('Carta ofrecida no encontrada');
+
+    const [{ reservada }] = await manager.query(`
+        SELECT COALESCE(SUM(dt.cantidad), 0)::int AS reservada
+        FROM detalle_transaccion dt
+        JOIN transaccion tr ON tr.id_transaccion = dt.id_transaccion
+        WHERE dt.id_carta_ofrecida = $1 AND tr.estado IN (${ESTADOS_RESERVA_SQL})
+    `, [idCartaOfrecida]);
+    return Number(reservada);
+}
 
 export const inventarioService = {
     obtenerOCrear: async (idExterno: number): Promise<TipoCarta> => {
@@ -194,8 +217,9 @@ export const inventarioService = {
         idUsuario: number,
         idCartaOfrecida: number,
         datos: { estado?: Estado, idioma?: string, precio?: number, cantidad?: number }
-    ) => {
-        const repo = AppDataSource.getRepository(CartaOfrecida);
+    ) => AppDataSource.transaction(async (manager) => {
+        const reservada = await bloquearYObtenerReservada(manager, idUsuario, idCartaOfrecida);
+        const repo = manager.getRepository(CartaOfrecida);
         const carta = await repo.findOne({
              where: { id_carta_ofrecida: idCartaOfrecida, usuario: { id_usuario: idUsuario } },
              relations: { tipo_carta: true, detalles_transaccion: true }
@@ -206,6 +230,15 @@ export const inventarioService = {
         const nuevoIdioma = datos.idioma ?? carta.idioma;
         const nuevaCantidad = datos.cantidad ?? carta.cantidad;
         const nuevoPrecio = datos.precio ?? carta.precio;
+
+        if (reservada > 0) {
+            if (nuevoEstado !== carta.estado || nuevoIdioma !== carta.idioma) {
+                throw new ConflictError('No puedes cambiar el estado ni el idioma de una carta comprometida en una transacción pendiente');
+            }
+            if (nuevaCantidad < reservada) {
+                throw new ConflictError(`La cantidad no puede ser menor a ${reservada}, unidades comprometidas en transacciones pendientes`);
+            }
+        }
 
         if (nuevoEstado !== carta.estado || nuevoIdioma !== carta.idioma) {
             const duplicada = await repo.findOne({
@@ -222,17 +255,15 @@ export const inventarioService = {
                 if (!duplicada.fecha_eliminacion) {
                     throw new ConflictError('Ya existe una carta ofrecida con el mismo estado e idioma');
                 }
-                await AppDataSource.transaction(async (manager) => {
-                    if (carta.detalles_transaccion.length > 0) {
-                        await manager.softRemove(carta);
-                    } else {
-                        await manager.remove(carta);
-                    }
-                    duplicada.fecha_eliminacion = null;
-                    duplicada.cantidad = nuevaCantidad;
-                    duplicada.precio = nuevoPrecio;
-                    await manager.save(duplicada);
-                });
+                if (carta.detalles_transaccion.length > 0) {
+                    await manager.softRemove(carta);
+                } else {
+                    await manager.remove(carta);
+                }
+                duplicada.fecha_eliminacion = null;
+                duplicada.cantidad = nuevaCantidad;
+                duplicada.precio = nuevoPrecio;
+                await manager.save(duplicada);
                 return {
                     id_carta_ofrecida: duplicada.id_carta_ofrecida,
                     id_tipo_carta: carta.tipo_carta.id_tipo_carta,
@@ -257,23 +288,30 @@ export const inventarioService = {
             precio: carta.precio,
             cantidad: carta.cantidad
         }
-    },
+    }),
 
     eliminarCartaOfrecida: async (idUsuario: number, idCartaOfrecida: number) => {
-        const repo = AppDataSource.getRepository(CartaOfrecida);
-        const carta = await repo.findOne({
-            where: { id_carta_ofrecida: idCartaOfrecida, usuario: { id_usuario: idUsuario } },
-            relations: { detalles_transaccion: true }
-        });
-        if (!carta) {
-            throw new NotFoundError('Carta ofrecida no encontrada');
-        }
+        await AppDataSource.transaction(async (manager) => {
+            const reservada = await bloquearYObtenerReservada(manager, idUsuario, idCartaOfrecida);
+            if (reservada > 0) {
+                throw new ConflictError('No puedes eliminar una carta comprometida en una transacción pendiente');
+            }
 
-        if (carta.detalles_transaccion.length > 0) {
-            await repo.softRemove(carta);
-        } else {
-            await repo.remove(carta);
-        }
+            const repo = manager.getRepository(CartaOfrecida);
+            const carta = await repo.findOne({
+                where: { id_carta_ofrecida: idCartaOfrecida, usuario: { id_usuario: idUsuario } },
+                relations: { detalles_transaccion: true }
+            });
+            if (!carta) {
+                throw new NotFoundError('Carta ofrecida no encontrada');
+            }
+
+            if (carta.detalles_transaccion.length > 0) {
+                await repo.softRemove(carta);
+            } else {
+                await repo.remove(carta);
+            }
+        });
     },
 
     modificarCartaDeseada: async (

@@ -123,6 +123,8 @@ export const inventarioController = {
         } catch (error: any) {
             if (error instanceof NotFoundError) {
                 sendError(res, 'Carta ofrecida no encontrada', [error.message], error.statusCode);
+            } else if (error instanceof ConflictError) {
+                sendError(res, 'Conflicto al eliminar la carta ofrecida', [error.message], error.statusCode);
             } else {
                 sendError(res, 'Error interno del servidor', [error.message], 500);
             }

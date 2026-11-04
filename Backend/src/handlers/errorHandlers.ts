@@ -7,6 +7,15 @@ export class CredentialError extends Error {
     }
 }
 
+export class BadRequestError extends Error {
+    statusCode = 400;
+
+    constructor(message: string) {
+        super(message);
+        this.name = 'BadRequestError';
+    }
+}
+
 export class NotFoundError extends Error {
     statusCode = 404;
 

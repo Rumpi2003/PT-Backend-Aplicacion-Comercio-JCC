@@ -1,28 +1,8 @@
 import { AppDataSource } from '../config/db.config.js';
-import type { Estado } from '../entities/cartaOfrecida.entity.js';
 import { Usuario } from '../entities/usuario.entity.js';
-import { estadoTransaccion } from '../entities/transaccion.entity.js';
 import { NotFoundError, ConflictError } from '../handlers/errorHandlers.js';
 import { In } from 'typeorm';
-
-const calidadEstado: Record<Estado, number> = {
-    PERFECTA: 7,
-    RECIEN_ABIERTA: 6,
-    DESGASTE_MENOR: 5,
-    DESGASTE_VISIBLE: 4,
-    DESGASTE_SEVERO: 3,
-    DAÑADA: 2,
-    DESTRUIDA: 1
-};
-
-const calidad = (estado: string): number => calidadEstado[estado as Estado];
-
-// Se interpolan solo constantes del enum (nunca input del usuario)
-const calidadSql = (columna: string): string =>
-    `CASE ${columna}::text ${Object.entries(calidadEstado).map(([e, v]) => `WHEN '${e}' THEN ${v}`).join(' ')} END`;
-
-const ESTADOS_ACTIVOS_SQL = [estadoTransaccion.EN_NEGOCIACION, estadoTransaccion.PENDIENTE]
-    .map(e => `'${e}'`).join(',');
+import { calidad, calidadSql, ESTADOS_ACTIVOS_SQL, SQL_RESERVADO } from './stock.sql.js';
 
 const MAX_PUNTUACION_RESENA = 5;
 const K_BAYES = 5;
@@ -38,18 +18,9 @@ const PESOS = {
     estado: 0.03
 } as const;
 
-// Stock ya comprometido en transacciones activas
-const SQL_RESERVADO = `
-    LEFT JOIN LATERAL (
-        SELECT SUM(dt.cantidad)::int AS reservada
-        FROM detalle_transaccion dt
-        JOIN transaccion tr ON tr.id_transaccion = dt.id_transaccion
-        WHERE dt.id_carta_ofrecida = o.id_carta_ofrecida
-          AND tr.estado IN (${ESTADOS_ACTIVOS_SQL})
-    ) r ON true`;
-
 export interface OpcionesEmparejamiento {
     usarGeolocalizacion?: boolean | undefined;
+    soloMiComuna?: boolean | undefined;
     limite?: number | undefined;
     offset?: number | undefined;
 }
@@ -157,12 +128,14 @@ export const emparejamientoService = {
     /**
      * Devuelve los pares (carta deseada del usuario, carta ofrecida por otro usuario) que cumplen
      * todas las condiciones de elegibilidad: perfil visible, idioma, estado mínimo, stock libre
-     * (descontando transacciones activas), sin transacción activa entre ambos y, si aplica, dentro del radio.
+     * (descontando transacciones activas), sin transacción activa entre ambos y, si aplica, dentro del radio
+     * o de la comuna indicada.
      */
     async obtenerCoincidenciasElegibles(
         idUsuario: number,
         usarGeo: boolean,
-        radioGeoM: number
+        radioGeoM: number,
+        idComuna: number | null = null
     ): Promise<ParDirecto[]> {
         const filas: any[] = await AppDataSource.query(`
             SELECT
@@ -193,6 +166,7 @@ export const emparejamientoService = {
             WHERE d.id_usuario = $1
               AND c.id_usuario <> $1
               AND c.visibilidad_perfil = true
+              AND ($5::int IS NULL OR c.id_comuna = $5::int)
               AND (o.cantidad - COALESCE(r.reservada, 0)) > 0
               AND ${calidadSql('o.estado')} >= ${calidadSql('d.estado_minimo')}
               AND NOT EXISTS (
@@ -210,7 +184,7 @@ export const emparejamientoService = {
                       AND ST_DWithin(c.ultimas_coordenadas, s.ultimas_coordenadas, $3::float)
                   )
               )
-        `, [idUsuario, usarGeo, radioGeoM, MAX_ANTIGUEDAD_GEO_HORAS]);
+        `, [idUsuario, usarGeo, radioGeoM, MAX_ANTIGUEDAD_GEO_HORAS, idComuna]);
 
         return filas.map(f => ({
             id_candidato: Number(f.id_candidato),
@@ -271,7 +245,10 @@ export const emparejamientoService = {
         const offset = opciones.offset ?? 0;
 
         const usuarioRepo = AppDataSource.getRepository(Usuario);
-        const solicitante = await usuarioRepo.findOne({ where: { id_usuario: idUsuario } });
+        const solicitante = await usuarioRepo.findOne({
+            where: { id_usuario: idUsuario },
+            relations: { comuna: true }
+        });
         if (!solicitante) throw new NotFoundError('Usuario no encontrado');
 
         const usarGeo = opciones.usarGeolocalizacion ?? solicitante.modo_geo_activado;
@@ -294,8 +271,13 @@ export const emparejamientoService = {
         const vacio = { total: 0, resultados: [] };
         if (totalDeseadas === 0) return vacio;
 
+        // La geolocalización tiene prioridad: si está activa, el filtro por comuna se ignora
+        const idComunaFiltro = !usarGeo && opciones.soloMiComuna
+            ? solicitante.comuna.id_comuna
+            : null;
+
         const pares = await emparejamientoService.obtenerCoincidenciasElegibles(
-            idUsuario, usarGeo, solicitante.radio_geo
+            idUsuario, usarGeo, solicitante.radio_geo, idComunaFiltro
         );
         if (pares.length === 0) return vacio;
 
