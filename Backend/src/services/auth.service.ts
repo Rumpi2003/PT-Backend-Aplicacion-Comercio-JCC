@@ -19,6 +19,16 @@ type LoginInput = {
     contraseña: string;
 };
 
+const firmarToken = (usuario: { id_usuario: number; correo: string }): string =>
+    jwt.sign(
+        {
+            id_usuario: usuario.id_usuario,
+            correo: usuario.correo
+        },
+        process.env.JWT_SECRET as string,
+        { expiresIn: '7d' }
+    );
+
 export const authService = {
     register: async ({ correo, contraseña, nombre_usuario, descripcion_perfil, contacto, id_comuna }: RegisterInput) => {
         if (!correo || !contraseña || !nombre_usuario || !id_comuna) {
@@ -82,14 +92,7 @@ export const authService = {
 
         const usuarioGuardado = await usuarioRepo.save(nuevoUsuario);
 
-        const token = jwt.sign(
-            {
-                id: usuarioGuardado.id_usuario,
-                correo: usuarioGuardado.correo
-            },
-            process.env.JWT_SECRET as string,
-            { expiresIn: '7d' }
-        );
+        const token = firmarToken(usuarioGuardado);
 
         return {
             token,
@@ -123,14 +126,7 @@ export const authService = {
             throw new CredentialError('La contraseña es incorrecta');
         }
 
-        const token = jwt.sign(
-            {
-                id_usuario: usuario.id_usuario,
-                correo: usuario.correo
-            },
-            process.env.JWT_SECRET as string,
-            { expiresIn: '7d' }
-        );
+        const token = firmarToken(usuario);
 
         return {
             token,

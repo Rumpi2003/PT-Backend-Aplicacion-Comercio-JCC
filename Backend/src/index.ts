@@ -11,6 +11,9 @@ import swaggerDocs from './utils/swagger.js';
 import { seedComunas } from './seeds/comuna.seed.js';
 import { seedFranquicias } from './seeds/franquicia.seed.js';
 import { iniciarExpiracionTransacciones } from './services/transaccion.service.js';
+import { initSockets } from './sockets/index.js';
+import { notificacionService } from './services/notificacion.service.js';
+import type { ChatServer } from './sockets/chat.types.js';
 
 dotenv.config();
 
@@ -25,13 +28,11 @@ app.use(morgan('dev'));
 
 routerApi(app);
 
-// Configuración de WebSockets para la app
-const io = new Server(httpServer, {
-    cors: {
-        origin: '*',
-        methods: ['GET', 'POST']
-    }
+// WebSockets para el chat. El cliente es una app nativa (sin CORS); el acceso lo controla el JWT del handshake
+const io: ChatServer = new Server(httpServer, {
+    maxHttpBufferSize: 16 * 1024
 });
+initSockets(io);
 
 // Inicializar Base de Datos y Arrancar Servidor
 AppDataSource.initialize()
@@ -50,6 +51,9 @@ AppDataSource.initialize()
 
         // Cancelar periódicamente las transacciones vencidas
         iniciarExpiracionTransacciones();
+
+        // Notificaciones push (se desactivan si no hay credenciales de Firebase)
+        notificacionService.iniciar();
 
         // Iniciar servidor HTTP / WebSocket solo si conecta la BD
         httpServer.listen(PORT, () => {

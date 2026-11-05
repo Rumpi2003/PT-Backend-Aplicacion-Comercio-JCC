@@ -16,6 +16,7 @@ export const usuarioService = {
         }
 
         const perfil = {
+            id_usuario: usuario.id_usuario,
             comuna: usuario.comuna,
             correo: usuario.correo,
             nombre_usuario: usuario.nombre_usuario,

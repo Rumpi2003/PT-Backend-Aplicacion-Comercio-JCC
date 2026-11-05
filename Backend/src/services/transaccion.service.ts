@@ -6,6 +6,10 @@ import { DetalleTransaccion } from '../entities/detalleTransaccion.entity.js';
 import { BadRequestError, ConflictError, NotFoundError } from '../handlers/errorHandlers.js';
 import { LIMITES_TRANSACCION } from '../config/transaccion.config.js';
 import { calidadSql, ESTADOS_ACTIVOS_SQL, SQL_RESERVADO } from './stock.sql.js';
+import { emitirChatCerrado } from '../sockets/chat.emitter.js';
+import { notificacionService } from './notificacion.service.js';
+import { mensajeService } from './mensaje.service.js';
+import { filasDe } from '../utils/db.js';
 
 export interface CartaSolicitada {
     id_carta_ofrecida: number;
@@ -61,28 +65,62 @@ const RELACIONES_TRANSACCION = {
     detalles_transaccion: { carta_ofrecida: { usuario: true, tipo_carta: true } }
 } as const;
 
+export interface TransaccionExpirada {
+    id_transaccion: number;
+    id_usuario_1: number;
+    id_usuario_2: number;
+    estado_anterior: estadoTransaccion;
+}
+
+/** Cierra el chat y avisa a los participantes de las transacciones que acaban de expirar; solo debe llamarse tras confirmar el cambio en BD. */
+function publicarExpiradas(expiradas: TransaccionExpirada[]): void {
+    for (const e of expiradas) {
+        if (e.estado_anterior === estadoTransaccion.PENDIENTE) emitirChatCerrado(e.id_transaccion);
+        notificacionService.notificar([e.id_usuario_1, e.id_usuario_2], 'EXPIRADA', e.id_transaccion);
+    }
+}
+
 /**
  * Cancela las transacciones sin respuesta que superaron su plazo (liberando cupo y, en PENDIENTE, el stock reservado).
  * Es idempotente; con `idUsuario` solo revisa las transacciones de ese usuario.
+ * Dentro de una transacción de BD hay que pasar `pendientesDePublicar` y llamar a `publicarExpiradas` tras el commit,
+ * porque un rollback deshace la expiración; sin él (consulta suelta) se publica de inmediato.
  */
 export async function expirarTransaccionesVencidas(
     manager: EntityManager = AppDataSource.manager,
-    idUsuario?: number
-): Promise<number> {
-    const [{ n }] = await manager.query(`
+    idUsuario?: number,
+    pendientesDePublicar?: TransaccionExpirada[]
+): Promise<TransaccionExpirada[]> {
+    const filas = filasDe(await manager.query(`
         WITH vencidas AS (
-            UPDATE transaccion
-            SET estado = '${estadoTransaccion.CANCELADA}', fecha_estado = NOW()
+            SELECT id_transaccion, estado::text AS estado_anterior
+            FROM transaccion
             WHERE ((estado = '${estadoTransaccion.EN_NEGOCIACION}'
                     AND fecha_estado < NOW() - make_interval(days => $1::int))
                 OR (estado = '${estadoTransaccion.PENDIENTE}'
                     AND fecha_estado < NOW() - make_interval(days => $2::int)))
               AND ($3::int IS NULL OR id_usuario_1 = $3::int OR id_usuario_2 = $3::int)
-            RETURNING 1
+            FOR UPDATE
         )
-        SELECT COUNT(*)::int AS n FROM vencidas
-    `, [LIMITES_TRANSACCION.diasExpiraEnNegociacion, LIMITES_TRANSACCION.diasExpiraPendiente, idUsuario ?? null]);
-    return Number(n);
+        UPDATE transaccion t
+        SET estado = '${estadoTransaccion.CANCELADA}', fecha_estado = NOW()
+        FROM vencidas v
+        WHERE t.id_transaccion = v.id_transaccion
+        RETURNING t.id_transaccion, t.id_usuario_1, t.id_usuario_2, v.estado_anterior
+    `, [LIMITES_TRANSACCION.diasExpiraEnNegociacion, LIMITES_TRANSACCION.diasExpiraPendiente, idUsuario ?? null]));
+
+    const expiradas: TransaccionExpirada[] = filas.map(f => ({
+        id_transaccion: Number(f.id_transaccion),
+        id_usuario_1: Number(f.id_usuario_1),
+        id_usuario_2: Number(f.id_usuario_2),
+        estado_anterior: f.estado_anterior as estadoTransaccion
+    }));
+    if (pendientesDePublicar) {
+        pendientesDePublicar.push(...expiradas);
+    } else {
+        publicarExpiradas(expiradas);
+    }
+    return expiradas;
 }
 
 /**
@@ -90,13 +128,18 @@ export async function expirarTransaccionesVencidas(
  * Debe llamarse dentro de la transacción que cambia el estado; bloquea a los usuarios en orden de id
  * y con el mismo bloqueo que usa la creación, para no evadir el límite en paralelo.
  */
-export async function validarCupoPendientes(manager: EntityManager, idActual: number, idOtro: number): Promise<void> {
+export async function validarCupoPendientes(
+    manager: EntityManager,
+    idActual: number,
+    idOtro: number,
+    pendientesDePublicar?: TransaccionExpirada[]
+): Promise<void> {
     const ids = [...new Set([idActual, idOtro])].sort((a, b) => a - b);
     for (const id of ids) {
         await manager.query(`SELECT pg_advisory_xact_lock(-1, $1::int)`, [id]);
     }
     for (const id of ids) {
-        await expirarTransaccionesVencidas(manager, id);
+        await expirarTransaccionesVencidas(manager, id, pendientesDePublicar);
         const [{ pendientes }] = await manager.query(`
             SELECT COUNT(*)::int AS pendientes FROM transaccion
             WHERE estado = '${estadoTransaccion.PENDIENTE}' AND (id_usuario_1 = $1 OR id_usuario_2 = $1)
@@ -372,11 +415,13 @@ export const transaccionService = {
             withDeleted: true
         });
 
+        const noLeidos = await mensajeService.contarNoLeidos(idUsuario, transacciones.map(t => t.id_transaccion));
+
         return {
             total,
             resultados: transacciones.map(t => {
                 const { cartas, ...resto } = proyectarTransaccion(t, idUsuario);
-                return resto;
+                return { ...resto, mensajes_no_leidos: noLeidos.get(t.id_transaccion) ?? 0 };
             })
         };
     },
@@ -394,12 +439,13 @@ export const transaccionService = {
             && (transaccion.usuario_1.id_usuario === idUsuario || transaccion.usuario_2.id_usuario === idUsuario);
         if (!transaccion || !esParticipante) throw new NotFoundError('Transacción no encontrada');
 
-        return proyectarTransaccion(transaccion, idUsuario);
+        const noLeidos = await mensajeService.contarNoLeidos(idUsuario, [idTransaccion]);
+        return { ...proyectarTransaccion(transaccion, idUsuario), mensajes_no_leidos: noLeidos.get(idTransaccion) ?? 0 };
     },
 
     /** Cualquiera de los participantes puede cancelar una transacción EN_NEGOCIACION o PENDIENTE para liberar cupo y stock. */
     async cancelarTransaccion(idUsuario: number, idTransaccion: number) {
-        return AppDataSource.transaction(async (manager) => {
+        const { resultado, estabaPendiente, idOtro } = await AppDataSource.transaction(async (manager) => {
             const [fila]: any[] = await manager.query(
                 `SELECT id_usuario_1, id_usuario_2, estado FROM transaccion WHERE id_transaccion = $1 FOR UPDATE`,
                 [idTransaccion]
@@ -415,8 +461,16 @@ export const transaccionService = {
                 `UPDATE transaccion SET estado = '${estadoTransaccion.CANCELADA}', fecha_estado = NOW() WHERE id_transaccion = $1`,
                 [idTransaccion]
             );
-            return { id_transaccion: idTransaccion, estado: estadoTransaccion.CANCELADA };
+            return {
+                resultado: { id_transaccion: idTransaccion, estado: estadoTransaccion.CANCELADA },
+                estabaPendiente: fila.estado === estadoTransaccion.PENDIENTE,
+                idOtro: Number(fila.id_usuario_1) === idUsuario ? Number(fila.id_usuario_2) : Number(fila.id_usuario_1)
+            };
         });
+        // Se avisa después del commit para que el chat no se cierre si la transacción se revierte
+        if (estabaPendiente) emitirChatCerrado(idTransaccion);
+        notificacionService.notificar([idOtro], 'CANCELADA', idTransaccion, idUsuario);
+        return resultado;
     },
 
     /** Reemplaza la oferta vigente por una nueva y pasa el turno al otro usuario. No renueva el plazo de expiración. */
@@ -425,8 +479,9 @@ export const transaccionService = {
             throw new BadRequestError('La contraoferta debe incluir al menos una carta');
         }
 
-        return AppDataSource.transaction(async (manager) => {
-            await expirarTransaccionesVencidas(manager, idUsuario);
+        const expiradas: TransaccionExpirada[] = [];
+        const resultado = await AppDataSource.transaction(async (manager) => {
+            await expirarTransaccionesVencidas(manager, idUsuario, expiradas);
             const { idUsuario1, idOtro } = await leerParaResponder(manager, idUsuario, idTransaccion, true);
 
             const { solicitadas, ofrecidas } = await resolverDetalles(manager, {
@@ -457,16 +512,20 @@ export const transaccionService = {
                 ...diferencias
             };
         });
+        publicarExpiradas(expiradas);
+        notificacionService.notificar([resultado.id_usuario_turno], 'CONTRAOFERTA', idTransaccion, idUsuario);
+        return resultado;
     },
 
     /** EN_NEGOCIACION -> PENDIENTE; revalida cupo y stock porque la negociación no reserva cartas. */
     async aceptarTransaccion(idUsuario: number, idTransaccion: number) {
-        return AppDataSource.transaction(async (manager) => {
-            await expirarTransaccionesVencidas(manager, idUsuario);
+        const expiradas: TransaccionExpirada[] = [];
+        const { resultado, idOtro } = await AppDataSource.transaction(async (manager) => {
+            await expirarTransaccionesVencidas(manager, idUsuario, expiradas);
             const { idOtro } = await leerParaResponder(manager, idUsuario, idTransaccion, false);
 
             // Bloqueos por usuario antes que el de la fila, igual que en la creación
-            await validarCupoPendientes(manager, idUsuario, idOtro);
+            await validarCupoPendientes(manager, idUsuario, idOtro, expiradas);
             await leerParaResponder(manager, idUsuario, idTransaccion, true);
 
             const disponibles: any[] = await manager.query(`
@@ -501,14 +560,18 @@ export const transaccionService = {
                  WHERE id_transaccion = $1`,
                 [idTransaccion]
             );
-            return { id_transaccion: idTransaccion, estado: estadoTransaccion.PENDIENTE };
+            return { resultado: { id_transaccion: idTransaccion, estado: estadoTransaccion.PENDIENTE }, idOtro };
         });
+        publicarExpiradas(expiradas);
+        notificacionService.notificar([idOtro], 'ACEPTADA', idTransaccion, idUsuario);
+        return resultado;
     },
 
     async rechazarTransaccion(idUsuario: number, idTransaccion: number) {
-        return AppDataSource.transaction(async (manager) => {
-            await expirarTransaccionesVencidas(manager, idUsuario);
-            await leerParaResponder(manager, idUsuario, idTransaccion, true);
+        const expiradas: TransaccionExpirada[] = [];
+        const { resultado, idOtro } = await AppDataSource.transaction(async (manager) => {
+            await expirarTransaccionesVencidas(manager, idUsuario, expiradas);
+            const { idOtro } = await leerParaResponder(manager, idUsuario, idTransaccion, true);
 
             await manager.query(
                 `UPDATE transaccion
@@ -516,8 +579,11 @@ export const transaccionService = {
                  WHERE id_transaccion = $1`,
                 [idTransaccion]
             );
-            return { id_transaccion: idTransaccion, estado: estadoTransaccion.RECHAZADA };
+            return { resultado: { id_transaccion: idTransaccion, estado: estadoTransaccion.RECHAZADA }, idOtro };
         });
+        publicarExpiradas(expiradas);
+        notificacionService.notificar([idOtro], 'RECHAZADA', idTransaccion, idUsuario);
+        return resultado;
     },
 
     async crearTransaccion(idUsuario: number, datos: DatosCrearTransaccion) {
@@ -525,13 +591,14 @@ export const transaccionService = {
         const solicitadas = datos.solicitadas;
         const ofrecidas = datos.ofrecidas ?? [];
 
-        return AppDataSource.transaction(async (manager) => {
+        const expiradas: TransaccionExpirada[] = [];
+        const resultado = await AppDataSource.transaction(async (manager) => {
             await validarContraparte(manager, idUsuario, idDestino);
 
             // Serializa las propuestas del mismo usuario para que el límite no se evada en paralelo.
             // El namespace negativo no choca con el bloqueo por par (ids positivos) de más abajo.
             await manager.query(`SELECT pg_advisory_xact_lock(-1, $1::int)`, [idUsuario]);
-            await expirarTransaccionesVencidas(manager, idUsuario);
+            await expirarTransaccionesVencidas(manager, idUsuario, expiradas);
 
             const [{ enviadas }] = await manager.query(`
                 SELECT COUNT(*)::int AS enviadas FROM transaccion
@@ -609,5 +676,8 @@ export const transaccionService = {
                 }))
             };
         });
+        publicarExpiradas(expiradas);
+        notificacionService.notificar([idDestino], 'NUEVA_PROPUESTA', resultado.id_transaccion, idUsuario);
+        return resultado;
     }
 };
