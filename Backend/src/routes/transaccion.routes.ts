@@ -16,5 +16,7 @@ router.patch('/:idTransaccion/cancelar', authMiddleware, transaccionController.c
 router.put('/:idTransaccion/contraoferta', authMiddleware, transaccionController.contraofertar);
 router.patch('/:idTransaccion/aceptar', authMiddleware, transaccionController.aceptarTransaccion);
 router.patch('/:idTransaccion/rechazar', authMiddleware, transaccionController.rechazarTransaccion);
+router.patch('/:idTransaccion/completar', authMiddleware, transaccionController.completarTransaccion);
+router.delete('/:idTransaccion/completar', authMiddleware, transaccionController.retirarConfirmacion);
 
 export default router;

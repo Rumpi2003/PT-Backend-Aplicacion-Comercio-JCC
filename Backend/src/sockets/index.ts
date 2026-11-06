@@ -64,6 +64,8 @@ export function initSockets(io: ChatServer): void {
         const { id_usuario } = socket.data.user;
         // Sala personal: permite avisar a todas las sesiones del usuario (varias pestañas o dispositivos)
         void socket.join(salaUsuario(id_usuario));
+        console.log(`[socket] conectado usuario=${id_usuario} socket=${socket.id}`);
+        socket.on('disconnect', (motivo) => console.log(`[socket] desconectado usuario=${id_usuario} socket=${socket.id} motivo=${motivo}`));
 
         const enviosRecientes: number[] = [];
 

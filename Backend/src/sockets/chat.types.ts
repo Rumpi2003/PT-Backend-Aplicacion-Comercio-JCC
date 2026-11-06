@@ -15,10 +15,28 @@ export interface ClientToServerEvents {
     'chat:leido': (payload: unknown, ack?: Ack<{ cantidad: number }>) => void;
 }
 
+export type CambioTransaccion =
+    | 'CREADA'
+    | 'CONTRAOFERTA'
+    | 'ACEPTADA'
+    | 'RECHAZADA'
+    | 'CANCELADA'
+    | 'EXPIRADA'
+    | 'CONFIRMACION'
+    | 'CONFIRMACION_RETIRADA'
+    | 'COMPLETADA';
+
+export interface CambioEstadoTransaccion {
+    id_transaccion: number;
+    estado: string;
+    cambio: CambioTransaccion;
+}
+
 export interface ServerToClientEvents {
     'chat:mensaje': (mensaje: MensajeChat) => void;
     'chat:leido': (payload: MensajesLeidos) => void;
     'chat:cerrado': (payload: { id_transaccion: number }) => void;
+    'transaccion:estado': (payload: CambioEstadoTransaccion) => void;
 }
 
 export interface SocketData {

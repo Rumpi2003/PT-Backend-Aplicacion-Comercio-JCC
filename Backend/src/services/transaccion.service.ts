@@ -6,9 +6,11 @@ import { DetalleTransaccion } from '../entities/detalleTransaccion.entity.js';
 import { BadRequestError, ConflictError, NotFoundError } from '../handlers/errorHandlers.js';
 import { LIMITES_TRANSACCION } from '../config/transaccion.config.js';
 import { calidadSql, ESTADOS_ACTIVOS_SQL, SQL_RESERVADO } from './stock.sql.js';
-import { emitirChatCerrado } from '../sockets/chat.emitter.js';
+import { emitirChatCerrado, emitirCambioTransaccion } from '../sockets/chat.emitter.js';
+import type { CambioTransaccion } from '../sockets/chat.types.js';
 import { notificacionService } from './notificacion.service.js';
 import { mensajeService } from './mensaje.service.js';
+import { resenaService, type ResenaPropia } from './resena.service.js';
 import { filasDe } from '../utils/db.js';
 
 export interface CartaSolicitada {
@@ -72,10 +74,16 @@ export interface TransaccionExpirada {
     estado_anterior: estadoTransaccion;
 }
 
+/** Avisa por socket a los participantes que cambió la transacción; solo debe llamarse tras confirmar el cambio en BD. */
+function avisarCambio(usuarios: number[], idTransaccion: number, estado: estadoTransaccion, cambio: CambioTransaccion): void {
+    emitirCambioTransaccion(usuarios, { id_transaccion: idTransaccion, estado, cambio });
+}
+
 /** Cierra el chat y avisa a los participantes de las transacciones que acaban de expirar; solo debe llamarse tras confirmar el cambio en BD. */
 function publicarExpiradas(expiradas: TransaccionExpirada[]): void {
     for (const e of expiradas) {
         if (e.estado_anterior === estadoTransaccion.PENDIENTE) emitirChatCerrado(e.id_transaccion);
+        avisarCambio([e.id_usuario_1, e.id_usuario_2], e.id_transaccion, estadoTransaccion.CANCELADA, 'EXPIRADA');
         notificacionService.notificar([e.id_usuario_1, e.id_usuario_2], 'EXPIRADA', e.id_transaccion);
     }
 }
@@ -194,6 +202,10 @@ function proyectarTransaccion(t: Transaccion, idUsuario: number) {
         fecha_estado: t.fecha_estado,
         mi_turno: t.estado === estadoTransaccion.EN_NEGOCIACION
             && (t.id_usuario_turno ?? t.usuario_2.id_usuario) === idUsuario,
+        yo_confirme: t.estado === estadoTransaccion.COMPLETADA
+            || (t.estado === estadoTransaccion.PENDIENTE && t.id_usuario_confirmacion === idUsuario),
+        contraparte_confirmo: t.estado === estadoTransaccion.COMPLETADA
+            || (t.estado === estadoTransaccion.PENDIENTE && t.id_usuario_confirmacion !== null && t.id_usuario_confirmacion !== idUsuario),
         rol: soyProponente ? 'PROPONENTE' as const : 'DESTINATARIO' as const,
         contraparte: {
             id_usuario: contraparte.id_usuario,
@@ -326,6 +338,111 @@ async function leerParaResponder(manager: EntityManager, idUsuario: number, idTr
     return { idUsuario1, idOtro: idUsuario1 === idUsuario ? idUsuario2 : idUsuario1 };
 }
 
+/** Exige que la transacción esté PENDIENTE y devuelve quién confirmó la entrega (si alguien lo hizo). */
+async function leerParaConfirmar(manager: EntityManager, idUsuario: number, idTransaccion: number) {
+    const [fila]: any[] = await manager.query(
+        `SELECT id_usuario_1, id_usuario_2, estado, id_usuario_confirmacion FROM transaccion
+         WHERE id_transaccion = $1 FOR UPDATE`,
+        [idTransaccion]
+    );
+    const idUsuario1 = Number(fila?.id_usuario_1);
+    const idUsuario2 = Number(fila?.id_usuario_2);
+    if (!fila || (idUsuario1 !== idUsuario && idUsuario2 !== idUsuario)) {
+        throw new NotFoundError('Transacción no encontrada');
+    }
+    if (fila.estado === estadoTransaccion.EN_NEGOCIACION) {
+        throw new ConflictError('La transacción aún no fue aceptada por ambos usuarios');
+    }
+    if (fila.estado !== estadoTransaccion.PENDIENTE) {
+        throw new ConflictError(`La transacción ya está ${fila.estado}`);
+    }
+    return {
+        idUsuario1,
+        idUsuario2,
+        idOtro: idUsuario1 === idUsuario ? idUsuario2 : idUsuario1,
+        confirmo: fila.id_usuario_confirmacion === null ? null : Number(fila.id_usuario_confirmacion)
+    };
+}
+
+/**
+ * Materializa el intercambio dentro de la transacción de BD que completa la operación:
+ * descuenta el stock entregado (con baja lógica si llega a 0, como en el inventario) y las unidades
+ * recibidas de la lista de deseos de cada usuario. Con el estado COMPLETADA la reserva deja de contar,
+ * así que sin este descuento las cartas entregadas volverían a aparecer disponibles.
+ */
+async function aplicarIntercambio(manager: EntityManager, idTransaccion: number, idUsuario1: number, idUsuario2: number): Promise<void> {
+    const detalles: any[] = await manager.query(`
+        SELECT dt.id_carta_ofrecida, dt.cantidad, o.id_usuario AS id_dueno, o.id_tipo_carta, o.idioma,
+               o.estado::text AS estado, o.cantidad AS stock
+        FROM detalle_transaccion dt
+        JOIN carta_ofrecida o ON o.id_carta_ofrecida = dt.id_carta_ofrecida
+        WHERE dt.id_transaccion = $1
+        ORDER BY o.id_carta_ofrecida
+        FOR UPDATE OF o
+    `, [idTransaccion]);
+
+    for (const d of detalles) {
+        if (Number(d.cantidad) > Number(d.stock)) {
+            throw new ConflictError(`La carta ${d.id_carta_ofrecida} ya no tiene stock suficiente para completar la transacción`);
+        }
+        await manager.query(`
+            UPDATE carta_ofrecida
+            SET cantidad = cantidad - $2::int,
+                fecha_eliminacion = CASE WHEN cantidad - $2::int = 0 THEN NOW() ELSE fecha_eliminacion END
+            WHERE id_carta_ofrecida = $1
+        `, [d.id_carta_ofrecida, d.cantidad]);
+    }
+
+    // Orden fijo (receptor, tipo de carta) para que dos transacciones simultáneas no se bloqueen entre sí
+    const recibidas = detalles
+        .map(d => ({
+            receptor: Number(d.id_dueno) === idUsuario1 ? idUsuario2 : idUsuario1,
+            idTipoCarta: Number(d.id_tipo_carta),
+            idioma: String(d.idioma),
+            estado: String(d.estado),
+            cantidad: Number(d.cantidad),
+            idCarta: Number(d.id_carta_ofrecida)
+        }))
+        .sort((a, b) => a.receptor - b.receptor || a.idTipoCarta - b.idTipoCarta || a.idCarta - b.idCarta);
+
+    for (const r of recibidas) {
+        // Mismo criterio de calce que el emparejamiento: idioma igual y calidad recibida >= estado mínimo deseado
+        const deseos: any[] = await manager.query(`
+            SELECT id_carta_deseada, cantidad FROM carta_deseada
+            WHERE id_usuario = $1 AND id_tipo_carta = $2 AND idioma = $3
+              AND ${calidadSql('$4::text')} >= ${calidadSql('estado_minimo')}
+            ORDER BY ${calidadSql('estado_minimo')} DESC, id_carta_deseada
+            FOR UPDATE
+        `, [r.receptor, r.idTipoCarta, r.idioma, r.estado]);
+
+        let restante = r.cantidad;
+        for (const deseo of deseos) {
+            if (restante <= 0) break;
+            const tomar = Math.min(restante, Number(deseo.cantidad));
+            if (tomar === Number(deseo.cantidad)) {
+                await manager.query(`DELETE FROM carta_deseada WHERE id_carta_deseada = $1`, [deseo.id_carta_deseada]);
+            } else {
+                await manager.query(`UPDATE carta_deseada SET cantidad = cantidad - $2::int WHERE id_carta_deseada = $1`, [deseo.id_carta_deseada, tomar]);
+            }
+            restante -= tomar;
+        }
+    }
+}
+
+/** Agrega a cada transacción si se puede reseñar a la contraparte (COMPLETADA) y la reseña que el usuario ya dejó. */
+async function conResenas<T extends { estado: estadoTransaccion; contraparte: { id_usuario: number } }>(
+    idUsuario: number,
+    items: T[]
+): Promise<(T & { puede_resenar: boolean; mi_resena: ResenaPropia | null })[]> {
+    const completadas = items.filter(i => i.estado === estadoTransaccion.COMPLETADA);
+    const mias = await resenaService.obtenerMias(idUsuario, [...new Set(completadas.map(i => i.contraparte.id_usuario))]);
+    return items.map(i => ({
+        ...i,
+        puede_resenar: i.estado === estadoTransaccion.COMPLETADA,
+        mi_resena: i.estado === estadoTransaccion.COMPLETADA ? (mias.get(i.contraparte.id_usuario) ?? null) : null
+    }));
+}
+
 export const transaccionService = {
     /**
      * Cartas con stock libre de `idDueno`, indicando cuántas unidades de cada una
@@ -416,14 +533,12 @@ export const transaccionService = {
         });
 
         const noLeidos = await mensajeService.contarNoLeidos(idUsuario, transacciones.map(t => t.id_transaccion));
+        const resultados = await conResenas(idUsuario, transacciones.map(t => {
+            const { cartas, ...resto } = proyectarTransaccion(t, idUsuario);
+            return { ...resto, mensajes_no_leidos: noLeidos.get(t.id_transaccion) ?? 0 };
+        }));
 
-        return {
-            total,
-            resultados: transacciones.map(t => {
-                const { cartas, ...resto } = proyectarTransaccion(t, idUsuario);
-                return { ...resto, mensajes_no_leidos: noLeidos.get(t.id_transaccion) ?? 0 };
-            })
-        };
+        return { total, resultados };
     },
 
     /** Detalle de una transacción; solo la pueden ver sus participantes, sin importar la visibilidad del perfil. */
@@ -440,7 +555,10 @@ export const transaccionService = {
         if (!transaccion || !esParticipante) throw new NotFoundError('Transacción no encontrada');
 
         const noLeidos = await mensajeService.contarNoLeidos(idUsuario, [idTransaccion]);
-        return { ...proyectarTransaccion(transaccion, idUsuario), mensajes_no_leidos: noLeidos.get(idTransaccion) ?? 0 };
+        const [detalle] = await conResenas(idUsuario, [
+            { ...proyectarTransaccion(transaccion, idUsuario), mensajes_no_leidos: noLeidos.get(idTransaccion) ?? 0 }
+        ]);
+        return detalle!;
     },
 
     /** Cualquiera de los participantes puede cancelar una transacción EN_NEGOCIACION o PENDIENTE para liberar cupo y stock. */
@@ -469,6 +587,7 @@ export const transaccionService = {
         });
         // Se avisa después del commit para que el chat no se cierre si la transacción se revierte
         if (estabaPendiente) emitirChatCerrado(idTransaccion);
+        avisarCambio([idUsuario, idOtro], idTransaccion, estadoTransaccion.CANCELADA, 'CANCELADA');
         notificacionService.notificar([idOtro], 'CANCELADA', idTransaccion, idUsuario);
         return resultado;
     },
@@ -513,6 +632,7 @@ export const transaccionService = {
             };
         });
         publicarExpiradas(expiradas);
+        avisarCambio([idUsuario, resultado.id_usuario_turno], idTransaccion, estadoTransaccion.EN_NEGOCIACION, 'CONTRAOFERTA');
         notificacionService.notificar([resultado.id_usuario_turno], 'CONTRAOFERTA', idTransaccion, idUsuario);
         return resultado;
     },
@@ -563,6 +683,7 @@ export const transaccionService = {
             return { resultado: { id_transaccion: idTransaccion, estado: estadoTransaccion.PENDIENTE }, idOtro };
         });
         publicarExpiradas(expiradas);
+        avisarCambio([idUsuario, idOtro], idTransaccion, estadoTransaccion.PENDIENTE, 'ACEPTADA');
         notificacionService.notificar([idOtro], 'ACEPTADA', idTransaccion, idUsuario);
         return resultado;
     },
@@ -582,7 +703,81 @@ export const transaccionService = {
             return { resultado: { id_transaccion: idTransaccion, estado: estadoTransaccion.RECHAZADA }, idOtro };
         });
         publicarExpiradas(expiradas);
+        avisarCambio([idUsuario, idOtro], idTransaccion, estadoTransaccion.RECHAZADA, 'RECHAZADA');
         notificacionService.notificar([idOtro], 'RECHAZADA', idTransaccion, idUsuario);
+        return resultado;
+    },
+
+    /**
+     * Confirma que la entrega se realizó. La primera confirmación solo se registra (no renueva el plazo de expiración);
+     * la del otro usuario completa la transacción de forma atómica: descuenta stock y deseos y pasa a COMPLETADA.
+     */
+    async confirmarCompletar(idUsuario: number, idTransaccion: number) {
+        const expiradas: TransaccionExpirada[] = [];
+        const { resultado, idOtro, completada } = await AppDataSource.transaction(async (manager) => {
+            await expirarTransaccionesVencidas(manager, idUsuario, expiradas);
+            const { idUsuario1, idUsuario2, idOtro, confirmo } = await leerParaConfirmar(manager, idUsuario, idTransaccion);
+
+            if (confirmo === idUsuario) {
+                throw new ConflictError('Ya confirmaste esta transacción; espera la confirmación del otro usuario');
+            }
+
+            if (confirmo === null) {
+                await manager.query(
+                    `UPDATE transaccion SET id_usuario_confirmacion = $2 WHERE id_transaccion = $1`,
+                    [idTransaccion, idUsuario]
+                );
+                return {
+                    resultado: { id_transaccion: idTransaccion, estado: estadoTransaccion.PENDIENTE, yo_confirme: true, contraparte_confirmo: false },
+                    idOtro,
+                    completada: false
+                };
+            }
+
+            await aplicarIntercambio(manager, idTransaccion, idUsuario1, idUsuario2);
+            await manager.query(
+                `UPDATE transaccion SET estado = '${estadoTransaccion.COMPLETADA}', fecha_estado = NOW() WHERE id_transaccion = $1`,
+                [idTransaccion]
+            );
+            return {
+                resultado: { id_transaccion: idTransaccion, estado: estadoTransaccion.COMPLETADA, yo_confirme: true, contraparte_confirmo: true },
+                idOtro,
+                completada: true
+            };
+        });
+
+        publicarExpiradas(expiradas);
+        if (completada) {
+            emitirChatCerrado(idTransaccion);
+            avisarCambio([idUsuario, idOtro], idTransaccion, estadoTransaccion.COMPLETADA, 'COMPLETADA');
+            notificacionService.notificar([idOtro], 'COMPLETADA', idTransaccion, idUsuario);
+        } else {
+            avisarCambio([idUsuario, idOtro], idTransaccion, estadoTransaccion.PENDIENTE, 'CONFIRMACION');
+            notificacionService.notificar([idOtro], 'CONFIRMACION', idTransaccion, idUsuario);
+        }
+        return resultado;
+    },
+
+    /** Retira la propia confirmación mientras el otro usuario no haya confirmado (p. ej. por un clic equivocado). */
+    async retirarConfirmacion(idUsuario: number, idTransaccion: number) {
+        const expiradas: TransaccionExpirada[] = [];
+        const { resultado, idOtro } = await AppDataSource.transaction(async (manager) => {
+            await expirarTransaccionesVencidas(manager, idUsuario, expiradas);
+            const { confirmo, idOtro } = await leerParaConfirmar(manager, idUsuario, idTransaccion);
+            if (confirmo !== idUsuario) {
+                throw new ConflictError('No has confirmado esta transacción');
+            }
+            await manager.query(
+                `UPDATE transaccion SET id_usuario_confirmacion = NULL WHERE id_transaccion = $1`,
+                [idTransaccion]
+            );
+            return {
+                resultado: { id_transaccion: idTransaccion, estado: estadoTransaccion.PENDIENTE, yo_confirme: false, contraparte_confirmo: false },
+                idOtro
+            };
+        });
+        publicarExpiradas(expiradas);
+        avisarCambio([idUsuario, idOtro], idTransaccion, estadoTransaccion.PENDIENTE, 'CONFIRMACION_RETIRADA');
         return resultado;
     },
 
@@ -677,6 +872,7 @@ export const transaccionService = {
             };
         });
         publicarExpiradas(expiradas);
+        avisarCambio([idUsuario, resultado.id_usuario_2], resultado.id_transaccion, estadoTransaccion.EN_NEGOCIACION, 'CREADA');
         notificacionService.notificar([idDestino], 'NUEVA_PROPUESTA', resultado.id_transaccion, idUsuario);
         return resultado;
     }

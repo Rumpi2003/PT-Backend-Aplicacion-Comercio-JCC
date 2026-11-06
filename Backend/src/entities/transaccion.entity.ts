@@ -42,6 +42,10 @@ export class Transaccion {
     @Column({ name: 'id_usuario_turno', type: 'int', nullable: true })
     id_usuario_turno!: number | null;
 
+    // En PENDIENTE: usuario que ya confirmó la entrega; la transacción se completa cuando confirma el otro
+    @Column({ name: 'id_usuario_confirmacion', type: 'int', nullable: true })
+    id_usuario_confirmacion!: number | null;
+
     @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
     fecha_creacion!: Date;
 

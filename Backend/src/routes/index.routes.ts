@@ -7,6 +7,7 @@ import inventarioRoutes from './inventario.routes.js';
 import emparejamientoRoutes from './emparejamiento.routes.js';
 import transaccionRoutes from './transaccion.routes.js';
 import dispositivoRoutes from './dispositivo.routes.js';
+import resenaRoutes from './resena.routes.js';
 
 export default function routerApi(app: Application) {
     const router = Router();
@@ -20,4 +21,5 @@ export default function routerApi(app: Application) {
     router.use('/emparejamientos', emparejamientoRoutes);
     router.use('/transacciones', transaccionRoutes);
     router.use('/dispositivos', dispositivoRoutes);
+    router.use('/resenas', resenaRoutes);
 }

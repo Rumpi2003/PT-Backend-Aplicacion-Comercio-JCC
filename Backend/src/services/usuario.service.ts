@@ -31,6 +31,37 @@ export const usuarioService = {
         return perfil;
     },
 
+    /**
+     * Perfil visible para otros usuarios. El correo nunca se expone; con `visibilidad_perfil = false` se ocultan
+     * la comuna y el contacto, pero el nombre, la descripción, el promedio y las reseñas siguen siendo públicos.
+     */
+    getPerfilPublico: async (idSolicitante: number, idUsuario: number) => {
+        const usuario = await AppDataSource.getRepository(Usuario).findOne({
+            where: { id_usuario: idUsuario },
+            relations: { comuna: true }
+        });
+        if (!usuario) {
+            throw new NotFoundError('Usuario no encontrado');
+        }
+
+        const [{ total }] = await AppDataSource.query(
+            `SELECT COUNT(*)::int AS total FROM "reseña" WHERE "id_usuario_reseñado" = $1`,
+            [idUsuario]
+        );
+        const datosVisibles = usuario.visibilidad_perfil || idSolicitante === idUsuario;
+
+        return {
+            id_usuario: usuario.id_usuario,
+            nombre_usuario: usuario.nombre_usuario,
+            descripcion_perfil: usuario.descripcion_perfil,
+            puntuacion_promedio: usuario.puntuacion_promedio,
+            total_resenas: Number(total),
+            fecha_registro: usuario.fecha_registro,
+            comuna: datosVisibles ? usuario.comuna : null,
+            contacto: datosVisibles ? usuario.contacto : null
+        };
+    },
+
     updateDescripcion: async (id: number, descripcion: string) => {
         const repo = AppDataSource.getRepository(Usuario);
         const usuario = await repo.findOne({

@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import { usuarioService } from "../services/usuario.service.js";
 import { sendSuccess, sendError } from '../handlers/responseHandlers.js'
 import { UpdateDescripcionSchema, UpdateComunaSchema, UpdateRadioGeoSchema, UpdateVisibilidadPerfilSchema, UpdateModoGeoSchema, UpdateUbicacionSchema } from '../validations/usuario.validation.js';
+import { IdUsuarioResenaParamSchema as IdUsuarioPerfilParamSchema } from '../validations/resena.validations.js';
 import { NotFoundError, ConflictError } from '../handlers/errorHandlers.js';
 
 
@@ -13,6 +14,25 @@ export const usuarioController = {
             sendSuccess(res, perfil);
         } catch (error: any) {
             sendError(res, 'Error interno del servidor', [error.message], 500);        
+        }
+    },
+
+    getPerfilPublico: async (req: Request, res: Response) => {
+        const { error, value } = IdUsuarioPerfilParamSchema.validate(req.params);
+        if (error) {
+            sendError(res, 'Error de validación', [error.message], 400);
+            return;
+        }
+        try {
+            const idSolicitante = Number(req.user?.id_usuario);
+            const perfil = await usuarioService.getPerfilPublico(idSolicitante, value.idUsuario);
+            sendSuccess(res, perfil, 'Perfil obtenido con éxito', 200);
+        } catch (error: any) {
+            if (error instanceof NotFoundError) {
+                sendError(res, 'Usuario no encontrado', [error.message], error.statusCode);
+            } else {
+                sendError(res, 'Error interno del servidor', [error.message], 500);
+            }
         }
     },
 

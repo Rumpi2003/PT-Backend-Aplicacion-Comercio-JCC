@@ -79,6 +79,36 @@ export const transaccionController = {
         }
     },
 
+    completarTransaccion: async (req: Request, res: Response) => {
+        const { error, value } = IdTransaccionParamSchema.validate(req.params);
+        if (error) {
+            sendError(res, 'Error de validación', [error.message], 400);
+            return;
+        }
+        try {
+            const id = Number(req.user?.id_usuario);
+            const resultado = await transaccionService.confirmarCompletar(id, value.idTransaccion);
+            sendSuccess(res, resultado, resultado.estado === 'COMPLETADA' ? 'Transacción completada con éxito' : 'Confirmación registrada con éxito', 200);
+        } catch (error: any) {
+            manejarError(res, error, 'No se pudo confirmar la transacción');
+        }
+    },
+
+    retirarConfirmacion: async (req: Request, res: Response) => {
+        const { error, value } = IdTransaccionParamSchema.validate(req.params);
+        if (error) {
+            sendError(res, 'Error de validación', [error.message], 400);
+            return;
+        }
+        try {
+            const id = Number(req.user?.id_usuario);
+            const resultado = await transaccionService.retirarConfirmacion(id, value.idTransaccion);
+            sendSuccess(res, resultado, 'Confirmación retirada con éxito', 200);
+        } catch (error: any) {
+            manejarError(res, error, 'No se pudo retirar la confirmación');
+        }
+    },
+
     rechazarTransaccion: async (req: Request, res: Response) => {
         const { error, value } = IdTransaccionParamSchema.validate(req.params);
         if (error) {

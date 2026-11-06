@@ -9,6 +9,8 @@ export type TipoNotificacion =
     | 'RECHAZADA'
     | 'CANCELADA'
     | 'EXPIRADA'
+    | 'CONFIRMACION'
+    | 'COMPLETADA'
     | 'MENSAJE';
 
 const TEXTOS: Record<TipoNotificacion, (actor: string) => { titulo: string; cuerpo: string }> = {
@@ -18,6 +20,8 @@ const TEXTOS: Record<TipoNotificacion, (actor: string) => { titulo: string; cuer
     RECHAZADA: (actor) => ({ titulo: 'Propuesta rechazada', cuerpo: `${actor} rechazó la propuesta` }),
     CANCELADA: (actor) => ({ titulo: 'Transacción cancelada', cuerpo: `${actor} canceló la transacción` }),
     EXPIRADA: () => ({ titulo: 'Transacción expirada', cuerpo: 'La transacción venció por falta de respuesta' }),
+    CONFIRMACION: (actor) => ({ titulo: 'Confirma la entrega', cuerpo: `${actor} confirmó el intercambio. Confirma tú para completar la transacción` }),
+    COMPLETADA: (actor) => ({ titulo: 'Transacción completada', cuerpo: `Completaste el intercambio con ${actor}. Puedes dejarle una reseña` }),
     // El contenido del mensaje no se incluye para no exponerlo en la pantalla de bloqueo
     MENSAJE: (actor) => ({ titulo: 'Nuevo mensaje', cuerpo: `Nuevo mensaje de ${actor}` })
 };
@@ -30,6 +34,8 @@ const CANAL_ANDROID: Record<TipoNotificacion, string> = {
     RECHAZADA: 'transacciones',
     CANCELADA: 'transacciones',
     EXPIRADA: 'transacciones',
+    CONFIRMACION: 'transacciones',
+    COMPLETADA: 'transacciones',
     MENSAJE: 'mensajes'
 };
 
