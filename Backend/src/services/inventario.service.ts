@@ -5,9 +5,11 @@ import { tcgApiService } from './tcgApi.service.js';
 import { CartaOfrecida, type Estado } from '../entities/cartaOfrecida.entity.js';
 import { CartaDeseada, EstadoMin } from '../entities/cartaDeseada.entity.js';
 import type { Usuario } from '../entities/usuario.entity.js';
-import { Not, type EntityManager } from 'typeorm';
+import { Not, type EntityManager, type Repository } from 'typeorm';
 import { NotFoundError, ConflictError } from '../handlers/errorHandlers.js'
 import { ESTADOS_RESERVA_SQL } from './stock.sql.js';
+import { estadoTransaccion } from '../entities/transaccion.entity.js';
+import { LIMITES_COLECCION } from '../config/transaccion.config.js';
 
 export type SortBy = 'nombre_carta' | 'precio' | 'franquicia';
 export type SortOrder = 'ASC' | 'DESC';
@@ -32,6 +34,39 @@ async function bloquearYObtenerReservada(manager: EntityManager, idUsuario: numb
         WHERE dt.id_carta_ofrecida = $1 AND tr.estado IN (${ESTADOS_RESERVA_SQL})
     `, [idCartaOfrecida]);
     return Number(reservada);
+}
+
+/**
+ * Impide editar o eliminar una carta que el usuario ofreció en una propuesta abierta (EN_NEGOCIACION).
+ * Solo bloquea si el usuario no tiene el turno, es decir, si la oferta vigente es suya.
+ * Las cartas que otro usuario le propuso siguen libres. `id_usuario_turno` nulo equivale al destinatario (`id_usuario_2`).
+ */
+// Cuenta solo filas activas: TypeORM excluye las eliminadas con soft delete
+async function validarCupo(
+    repo: Repository<CartaOfrecida> | Repository<CartaDeseada>,
+    idUsuario: number,
+    maximo: number,
+    nombre: string
+): Promise<void> {
+    const total = await repo.count({ where: { usuario: { id_usuario: idUsuario } } });
+    if (total >= maximo) {
+        throw new ConflictError(`Alcanzaste el límite de ${maximo} entradas en tu ${nombre}`);
+    }
+}
+
+async function validarSinOfertaAbierta(manager: EntityManager, idUsuario: number, idCartaOfrecida: number): Promise<void> {
+    const [ofertada] = await manager.query(`
+        SELECT 1
+        FROM detalle_transaccion dt
+        JOIN transaccion tr ON tr.id_transaccion = dt.id_transaccion
+        WHERE dt.id_carta_ofrecida = $1
+          AND tr.estado = '${estadoTransaccion.EN_NEGOCIACION}'
+          AND COALESCE(tr.id_usuario_turno, tr.id_usuario_2) <> $2
+        LIMIT 1
+    `, [idCartaOfrecida, idUsuario]);
+    if (ofertada) {
+        throw new ConflictError('No puedes modificar ni eliminar una carta que ofreciste en una propuesta abierta. Cancela la propuesta primero');
+    }
 }
 
 export const inventarioService = {
@@ -93,6 +128,7 @@ export const inventarioService = {
 
         if (existente) {
             if (existente.fecha_eliminacion) {
+                await validarCupo(repo, idUsuario, LIMITES_COLECCION.maxInventarioCartas, 'inventario');
                 existente.fecha_eliminacion = null;
                 existente.cantidad = datos.cantidad ?? 1;
                 existente.precio = datos.precio;
@@ -106,6 +142,7 @@ export const inventarioService = {
             return formatear(await repo.save(existente));
         }
 
+        await validarCupo(repo, idUsuario, LIMITES_COLECCION.maxInventarioCartas, 'inventario');
         const nueva = repo.create({
             usuario: { id_usuario: idUsuario } as Usuario,
             tipo_carta: tipoCarta,
@@ -148,6 +185,7 @@ export const inventarioService = {
             return formatear(await repo.save(existente));
         }
 
+        await validarCupo(repo, idUsuario, LIMITES_COLECCION.maxListaDeseos, 'lista de deseos');
         const nueva = repo.create({
             usuario: { id_usuario: idUsuario } as Usuario,
             tipo_carta: tipoCarta,
@@ -219,6 +257,7 @@ export const inventarioService = {
         datos: { estado?: Estado, idioma?: string, precio?: number, cantidad?: number }
     ) => AppDataSource.transaction(async (manager) => {
         const reservada = await bloquearYObtenerReservada(manager, idUsuario, idCartaOfrecida);
+        await validarSinOfertaAbierta(manager, idUsuario, idCartaOfrecida);
         const repo = manager.getRepository(CartaOfrecida);
         const carta = await repo.findOne({
              where: { id_carta_ofrecida: idCartaOfrecida, usuario: { id_usuario: idUsuario } },
@@ -293,6 +332,7 @@ export const inventarioService = {
     eliminarCartaOfrecida: async (idUsuario: number, idCartaOfrecida: number) => {
         await AppDataSource.transaction(async (manager) => {
             const reservada = await bloquearYObtenerReservada(manager, idUsuario, idCartaOfrecida);
+            await validarSinOfertaAbierta(manager, idUsuario, idCartaOfrecida);
             if (reservada > 0) {
                 throw new ConflictError('No puedes eliminar una carta comprometida en una transacción pendiente');
             }

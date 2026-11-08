@@ -14,3 +14,9 @@ export const LIMITES_TRANSACCION = {
     diasExpiraPendiente: entero('TX_DIAS_EXPIRA_PENDIENTE', 14),
     minutosIntervaloExpiracion: entero('TX_MINUTOS_INTERVALO_EXPIRACION', 60)
 } as const;
+
+// Cupos por usuario: cuentan filas activas (una por carta, estado e idioma)
+export const LIMITES_COLECCION = {
+    maxListaDeseos: entero('MAX_LISTA_DESEOS', 50),
+    maxInventarioCartas: entero('MAX_INVENTARIO_CARTAS', 250)
+} as const;
