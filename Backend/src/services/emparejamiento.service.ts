@@ -83,7 +83,7 @@ export const ocultarDistancia = (distanciaM: number | null) => {
         : { distancia_m: Math.round(distanciaM), distancia_aproximada: false };
 };
 
-/** Reparte unidades sin contar dos veces una misma carta ofrecida ni una misma necesidad. */
+// Reparte unidades sin contar dos veces una misma carta ofrecida ni una misma necesidad.
 function asignarUnidades<T extends ParCompatible>(pares: T[]): Asignacion<T>[] {
     const demanda = new Map<number, number>();
     const stock = new Map<number, number>();
@@ -125,12 +125,10 @@ const sumar = <T>(items: T[], f: (t: T) => number): number =>
     items.reduce((acc, item) => acc + f(item), 0);
 
 export const emparejamientoService = {
-    /**
-     * Devuelve los pares (carta deseada del usuario, carta ofrecida por otro usuario) que cumplen
-     * todas las condiciones de elegibilidad: perfil visible, idioma, estado mínimo, stock libre
-     * (descontando transacciones activas), sin transacción activa entre ambos y, si aplica, dentro del radio
-     * o de la comuna indicada.
-     */
+    // Devuelve los pares (carta deseada del usuario, carta ofrecida por otro usuario) que cumplen
+    // todas las condiciones de elegibilidad: perfil visible, idioma, estado mínimo, stock libre
+    // (descontando transacciones activas), sin transacción activa entre ambos y, si aplica, dentro del radio
+    // o de la comuna indicada.
     async obtenerCoincidenciasElegibles(
         idUsuario: number,
         usarGeo: boolean,

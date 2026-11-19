@@ -20,7 +20,7 @@ interface JwtUserPayload extends JwtPayload {
     correo: string;
 }
 
-/** Valida el JWT y carga la cuenta desde la BD: el rol y la suspensión nunca se confían al token. */
+// Valida el JWT y carga la cuenta desde la BD: el rol y la suspensión nunca se confían al token.
 export const authMiddleware = async (req: Request, res: Response, next: NextFunction): Promise<Response|void> => {
     const authHeader = req.headers.authorization;
 
@@ -108,7 +108,7 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
     return next();
 };
 
-/** Debe usarse después de `authMiddleware`; el rol ya viene de la BD, no del token. */
+// Debe usarse después de `authMiddleware`; el rol ya viene de la BD, no del token.
 export const requiereAdmin = (req: Request, res: Response, next: NextFunction): Response|void => {
     if (req.user?.rol !== rolUsuario.ADMIN) {
         return res.status(403).json({

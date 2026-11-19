@@ -18,7 +18,7 @@ export interface FiltrosReportes {
     offset?: number | undefined;
 }
 
-/** Transiciones permitidas; DESESTIMADO y SANCIONADO son estados finales. */
+// Transiciones permitidas; DESESTIMADO y SANCIONADO son estados finales.
 const TRANSICIONES: Record<estadoReporte, estadoReporte[]> = {
     [estadoReporte.PENDIENTE]: [estadoReporte.DESESTIMADO, estadoReporte.ARCHIVADO, estadoReporte.SANCIONADO],
     [estadoReporte.ARCHIVADO]: [estadoReporte.DESESTIMADO, estadoReporte.SANCIONADO],
@@ -26,7 +26,7 @@ const TRANSICIONES: Record<estadoReporte, estadoReporte[]> = {
     [estadoReporte.SANCIONADO]: []
 };
 
-/** Mensajes del chat de la transacción asociada, en orden cronológico; `[]` si el reporte es de perfil. */
+// Mensajes del chat de la transacción asociada, en orden cronológico; `[]` si el reporte es de perfil.
 const SQL_CHAT = `COALESCE((
     SELECT json_agg(json_build_object(
         'id_mensaje', m.id_mensaje,
@@ -40,16 +40,14 @@ const SQL_CHAT = `COALESCE((
 
 const iso = (fecha: Date | string | null) => (fecha ? new Date(fecha).toISOString() : null);
 
-/** Lee y bloquea al reportante para serializar la comprobación de duplicados. */
+// Lee y bloquea al reportante para serializar la comprobación de duplicados.
 async function bloquearUsuario(manager: EntityManager, idUsuario: number): Promise<void> {
     await manager.query(`SELECT id_usuario FROM usuario WHERE id_usuario = $1 FOR UPDATE`, [idUsuario]);
 }
 
 export const reporteService = {
-    /**
-     * Reporte a la contraparte de una transacción. Solo participantes, dentro del plazo desde el último cambio de estado,
-     * y como máximo un reporte por reportante y transacción, sin importar su estado.
-     */
+    // Reporte a la contraparte de una transacción. Solo participantes, dentro del plazo desde el último cambio de estado,
+    // y como máximo un reporte por reportante y transacción, sin importar su estado.
     async crearDesdeTransaccion(idReportante: number, idTransaccion: number, datos: DatosReporte) {
         return AppDataSource.transaction(async (manager) => {
             await bloquearUsuario(manager, idReportante);
@@ -92,7 +90,7 @@ export const reporteService = {
         });
     },
 
-    /** Reporte directo a un usuario desde su perfil (sin transacción asociada). Máximo un PENDIENTE por par de usuarios. */
+    // Reporte directo a un usuario desde su perfil (sin transacción asociada). Máximo un PENDIENTE por par de usuarios.
     async crearDesdePerfil(idReportante: number, idReportado: number, datos: DatosReporte) {
         if (idReportante === idReportado) {
             throw new BadRequestError('No puedes reportarte a ti mismo');
@@ -128,7 +126,7 @@ export const reporteService = {
         });
     },
 
-    /** Listado para el administrador; cada reporte incluye el chat de su transacción (vacío si no tiene). */
+    // Listado para el administrador; cada reporte incluye el chat de su transacción (vacío si no tiene).
     async listar({ estado, limite = 20, offset = 0 }: FiltrosReportes) {
         const filtro = estado ?? null;
 
@@ -171,10 +169,8 @@ export const reporteService = {
         };
     },
 
-    /**
-     * Detalle para moderar: reporte, transacción con su chat y antecedentes del reportado
-     * (otros reportes PENDIENTE o ARCHIVADO contra el mismo usuario; los DESESTIMADO y SANCIONADO no se muestran).
-     */
+    // Detalle para moderar: reporte, transacción con su chat y antecedentes del reportado
+    // (otros reportes PENDIENTE o ARCHIVADO contra el mismo usuario; los DESESTIMADO y SANCIONADO no se muestran).
     async detalle(idReporte: number) {
         const [f] = filasDe(await AppDataSource.query(
             `SELECT r.id_reporte, r.motivo, r.descripcion_reporte, r.estado, r.resolucion, r.fecha_creacion, r.fecha_recepcion, r.id_transaccion,
@@ -230,10 +226,8 @@ export const reporteService = {
         };
     },
 
-    /**
-     * Cambia el estado de un reporte respetando TRANSICIONES. SANCIONADO suspende al reportado y cancela sus transacciones activas
-     * en la misma transacción de BD; el aviso por socket y la desconexión se hacen tras el commit.
-     */
+    // Cambia el estado de un reporte respetando TRANSICIONES. SANCIONADO suspende al reportado y cancela sus transacciones activas
+    // en la misma transacción de BD; el aviso por socket y la desconexión se hacen tras el commit.
     async cambiarEstado(idReporte: number, nuevoEstado: estadoReporte, resolucion: string | null = null) {
         const resultado = await AppDataSource.transaction(async (manager) => {
             const [reporte] = filasDe(await manager.query(
@@ -270,7 +264,7 @@ export const reporteService = {
         return { id_reporte: resultado.id_reporte, estado: resultado.estado, estado_anterior: resultado.anterior, resolucion };
     },
 
-    /** Levanta la suspensión de una cuenta; no revierte las transacciones ya canceladas. */
+    // Levanta la suspensión de una cuenta; no revierte las transacciones ya canceladas.
     async levantarSuspension(idUsuario: number) {
         const filas = filasDe(await AppDataSource.query(
             `UPDATE usuario SET suspendido = false WHERE id_usuario = $1 RETURNING id_usuario, suspendido`,

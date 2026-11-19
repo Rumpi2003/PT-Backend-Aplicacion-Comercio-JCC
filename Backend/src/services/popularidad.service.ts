@@ -1,12 +1,12 @@
 import { AppDataSource } from '../config/db.config.js';
 
-/** Cantidad de cartas que devuelve el ranking de popularidad. */
+// Cantidad de cartas que devuelve el ranking de popularidad.
 const TOP_POPULARIDAD = 10;
-/** Ventana en la que cuentan las transacciones completadas. */
+// Ventana en la que cuentan las transacciones completadas.
 const VENTANA_DIAS = 30;
-/** Peso de cada transacción completada en la ventana. */
+// Peso de cada transacción completada en la ventana.
 const PESO_TRANSACCION = 3;
-/** Peso de cada usuario que tiene la carta en su lista de deseos. */
+// Peso de cada usuario que tiene la carta en su lista de deseos.
 const PESO_DESEO = 1;
 
 export interface CartaPopular {

@@ -14,10 +14,8 @@ export interface ResenaPropia {
 }
 
 export const resenaService = {
-    /**
-     * Crea o edita la reseña de `idResenador` hacia `idResenado` (una por par de usuarios) y recalcula el promedio.
-     * Exige haber completado al menos una transacción juntos, lo que impide reseñas sin intercambio real.
-     */
+    // Crea o edita la reseña de `idResenador` hacia `idResenado` (una por par de usuarios) y recalcula el promedio.
+    // Exige haber completado al menos una transacción juntos, lo que impide reseñas sin intercambio real.
     async guardar(idResenador: number, idResenado: number, datos: DatosResena) {
         if (idResenador === idResenado) {
             throw new BadRequestError('No puedes reseñarte a ti mismo');
@@ -71,7 +69,7 @@ export const resenaService = {
         });
     },
 
-    /** Reseñas que `idResenador` dejó a cada usuario de `idsResenado`; los que no tienen reseña no aparecen. */
+    // Reseñas que `idResenador` dejó a cada usuario de `idsResenado`; los que no tienen reseña no aparecen.
     async obtenerMias(idResenador: number, idsResenado: number[]): Promise<Map<number, ResenaPropia>> {
         if (idsResenado.length === 0) return new Map();
         const filas: any[] = await AppDataSource.query(
@@ -86,13 +84,13 @@ export const resenaService = {
         }]));
     },
 
-    /** Reseña propia hacia un usuario para precargar el formulario de edición; `null` si aún no existe. */
+    // Reseña propia hacia un usuario para precargar el formulario de edición; `null` si aún no existe.
     async obtenerMia(idResenador: number, idResenado: number): Promise<ResenaPropia | null> {
         const mapa = await resenaService.obtenerMias(idResenador, [idResenado]);
         return mapa.get(idResenado) ?? null;
     },
 
-    /** Reseñas recibidas por un usuario, de la más reciente a la más antigua. Siempre públicas, sin importar `visibilidad_perfil`. */
+    // Reseñas recibidas por un usuario, de la más reciente a la más antigua. Siempre públicas, sin importar `visibilidad_perfil`.
     async listarRecibidas(idUsuario: number, limite = 20, offset = 0) {
         const [existe] = await AppDataSource.query(`SELECT 1 FROM usuario WHERE id_usuario = $1`, [idUsuario]);
         if (!existe) throw new NotFoundError('Usuario no encontrado');

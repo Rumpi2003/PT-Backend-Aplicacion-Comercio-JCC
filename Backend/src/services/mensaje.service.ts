@@ -35,10 +35,8 @@ const proyectarMensaje = (idTransaccion: number, fila: any): MensajeChat => ({
     fecha_envio: new Date(fila.fecha_envio).toISOString()
 });
 
-/**
- * Lee la transacción exigiendo que `idUsuario` sea participante. Con `bloqueoCompartido` el estado no puede cambiar
- * (p. ej. cancelarse) hasta que termine la transacción de base de datos que la consulta.
- */
+// Lee la transacción exigiendo que `idUsuario` sea participante. Con `bloqueoCompartido` el estado no puede cambiar
+// (p. ej. cancelarse) hasta que termine la transacción de base de datos que la consulta.
 async function leerParticipacion(manager: EntityManager, idUsuario: number, idTransaccion: number, bloqueoCompartido = false) {
     const [fila]: any[] = await manager.query(
         `SELECT id_usuario_1, id_usuario_2, estado FROM transaccion
@@ -63,13 +61,13 @@ const exigirChatAbierto = (estado: estadoTransaccion): void => {
 };
 
 export const mensajeService = {
-    /** Valida que el usuario pueda usar el chat de la transacción (participante y transacción PENDIENTE). */
+    // Valida que el usuario pueda usar el chat de la transacción (participante y transacción PENDIENTE).
     async validarAccesoChat(idUsuario: number, idTransaccion: number): Promise<void> {
         const { estado } = await leerParticipacion(AppDataSource.manager, idUsuario, idTransaccion);
         exigirChatAbierto(estado);
     },
 
-    /** Guarda un mensaje; el estado se revalida en cada envío porque puede cambiar mientras el socket sigue en la sala. */
+    // Guarda un mensaje; el estado se revalida en cada envío porque puede cambiar mientras el socket sigue en la sala.
     async enviar(idUsuario: number, idTransaccion: number, contenido: string): Promise<{ mensaje: MensajeChat; idDestinatario: number }> {
         return AppDataSource.transaction(async (manager) => {
             const { estado, idOtro } = await leerParticipacion(manager, idUsuario, idTransaccion, true);
@@ -84,10 +82,8 @@ export const mensajeService = {
         });
     },
 
-    /**
-     * Marca como leídos los mensajes que `idUsuario` recibió (hasta `hastaIdMensaje`, o todos si se omite) y avisa a la sala.
-     * No exige que el chat siga abierto: solo cambia un indicador.
-     */
+    // Marca como leídos los mensajes que `idUsuario` recibió (hasta `hastaIdMensaje`, o todos si se omite) y avisa a la sala.
+    // No exige que el chat siga abierto: solo cambia un indicador.
     async marcarLeidos(idUsuario: number, idTransaccion: number, hastaIdMensaje?: number): Promise<{ cantidad: number }> {
         await leerParticipacion(AppDataSource.manager, idUsuario, idTransaccion);
 
@@ -108,7 +104,7 @@ export const mensajeService = {
         return { cantidad: filas.length };
     },
 
-    /** Mensajes sin leer que `idUsuario` tiene en cada transacción dada; las que no tienen ninguno no aparecen. */
+    // Mensajes sin leer que `idUsuario` tiene en cada transacción dada; las que no tienen ninguno no aparecen.
     async contarNoLeidos(idUsuario: number, idsTransaccion: number[]): Promise<Map<number, number>> {
         if (idsTransaccion.length === 0) return new Map();
         const filas: { id_transaccion: number; n: number }[] = await AppDataSource.query(
@@ -120,10 +116,8 @@ export const mensajeService = {
         return new Map(filas.map(f => [Number(f.id_transaccion), Number(f.n)]));
     },
 
-    /**
-     * Historial en orden cronológico. Sin cursores devuelve los últimos mensajes; `antes` pagina hacia atrás y
-     * `despues` recupera lo perdido tras una reconexión. Es de solo lectura, así que sigue disponible al cerrarse el chat.
-     */
+    // Historial en orden cronológico. Sin cursores devuelve los últimos mensajes; `antes` pagina hacia atrás y
+    // `despues` recupera lo perdido tras una reconexión. Es de solo lectura, así que sigue disponible al cerrarse el chat.
     async listarHistorial(idUsuario: number, idTransaccion: number, opciones: OpcionesHistorial = {}) {
         await leerParticipacion(AppDataSource.manager, idUsuario, idTransaccion);
 

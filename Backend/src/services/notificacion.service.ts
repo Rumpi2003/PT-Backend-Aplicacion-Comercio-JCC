@@ -26,7 +26,6 @@ const TEXTOS: Record<TipoNotificacion, (actor: string) => { titulo: string; cuer
     MENSAJE: (actor) => ({ titulo: 'Nuevo mensaje', cuerpo: `Nuevo mensaje de ${actor}` })
 };
 
-// Los canales deben crearse en la app Android con estos mismos ids
 const CANAL_ANDROID: Record<TipoNotificacion, string> = {
     NUEVA_PROPUESTA: 'transacciones',
     CONTRAOFERTA: 'transacciones',
@@ -48,7 +47,7 @@ const MAX_TOKENS_POR_ENVIO = 500;
 let app: App | null = null;
 let intentoInicializar = false;
 
-/** La cuenta de servicio de Firebase llega como JSON o en base64 por FIREBASE_SERVICE_ACCOUNT; sin ella el push queda desactivado. */
+// La cuenta de servicio de Firebase llega como JSON por FIREBASE_SERVICE_ACCOUNT; sin ella el push queda desactivado.
 function obtenerMessaging(): Messaging | null {
     if (!intentoInicializar) {
         intentoInicializar = true;
@@ -107,12 +106,12 @@ async function enviar(idsUsuario: number[], tipo: TipoNotificacion, idTransaccio
 }
 
 export const notificacionService = {
-    /** Inicializa Firebase al arrancar para detectar pronto una configuración ausente o inválida. */
+    // Inicializa Firebase al arrancar para detectar pronto una configuración ausente o inválida.
     iniciar(): void {
         obtenerMessaging();
     },
 
-    /** Registra el token de FCM; si ya existía para otra cuenta (mismo dispositivo) pasa a pertenecer a esta. */
+    // Registra el token de FCM; si ya existía para otra cuenta (mismo dispositivo) pasa a pertenecer a esta.
     async registrarDispositivo(idUsuario: number, token: string): Promise<void> {
         await AppDataSource.query(
             `INSERT INTO dispositivo_push (id_usuario, token) VALUES ($1, $2)
@@ -121,7 +120,7 @@ export const notificacionService = {
         );
     },
 
-    /** Se usa al cerrar sesión; solo elimina el token si pertenece al usuario autenticado. */
+    // Se usa al cerrar sesión; solo elimina el token si pertenece al usuario autenticado.
     async eliminarDispositivo(idUsuario: number, token: string): Promise<void> {
         await AppDataSource.query(
             `DELETE FROM dispositivo_push WHERE token = $1 AND id_usuario = $2`,
@@ -129,10 +128,8 @@ export const notificacionService = {
         );
     },
 
-    /**
-     * Envía el push en segundo plano: nunca lanza ni se espera, para que una caída de FCM no afecte la operación de negocio.
-     * `idActor` es quien originó el evento (su nombre aparece en el texto); puede omitirse en eventos del sistema.
-     */
+    // Envía el push en segundo plano: nunca lanza ni se espera, para que una caída de FCM no afecte la operación de negocio.
+    // `idActor` es quien originó el evento (su nombre aparece en el texto); puede omitirse en eventos del sistema.
     notificar(destinatarios: number[], tipo: TipoNotificacion, idTransaccion: number, idActor?: number): void {
         void (async () => {
             const ids = [...new Set(destinatarios)];

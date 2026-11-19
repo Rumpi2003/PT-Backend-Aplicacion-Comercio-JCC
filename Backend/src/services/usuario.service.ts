@@ -31,10 +31,9 @@ export const usuarioService = {
         return perfil;
     },
 
-    /**
-     * Perfil visible para otros usuarios. El correo nunca se expone; con `visibilidad_perfil = false` se ocultan
-     * la comuna y el contacto, pero el nombre, la descripción, el promedio y las reseñas siguen siendo públicos.
-     */
+    
+    // Perfil visible para otros usuarios. El correo nunca se expone; con `visibilidad_perfil = false` se ocultan
+    // la comuna y el contacto, pero el nombre, la descripción, el promedio y las reseñas siguen siendo públicos.
     getPerfilPublico: async (idSolicitante: number, idUsuario: number) => {
         const usuario = await AppDataSource.getRepository(Usuario).findOne({
             where: { id_usuario: idUsuario },

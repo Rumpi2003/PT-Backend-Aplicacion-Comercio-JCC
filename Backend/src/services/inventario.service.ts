@@ -14,10 +14,8 @@ import { LIMITES_COLECCION } from '../config/transaccion.config.js';
 export type SortBy = 'nombre_carta' | 'precio' | 'franquicia';
 export type SortOrder = 'ASC' | 'DESC';
 
-/**
- * Bloquea la carta del usuario (FOR UPDATE) y devuelve las unidades comprometidas en transacciones PENDIENTE.
- * El bloqueo serializa la edición con otras operaciones que reservan stock sobre la misma carta.
- */
+// Bloquea la carta del usuario (FOR UPDATE) y devuelve las unidades comprometidas en transacciones PENDIENTE.
+// El bloqueo serializa la edición con otras operaciones que reservan stock sobre la misma carta.
 async function bloquearYObtenerReservada(manager: EntityManager, idUsuario: number, idCartaOfrecida: number): Promise<number> {
     const bloqueada: any[] = await manager.query(
         `SELECT 1 FROM carta_ofrecida
@@ -36,11 +34,11 @@ async function bloquearYObtenerReservada(manager: EntityManager, idUsuario: numb
     return Number(reservada);
 }
 
-/**
- * Impide editar o eliminar una carta que el usuario ofreció en una propuesta abierta (EN_NEGOCIACION).
- * Solo bloquea si el usuario no tiene el turno, es decir, si la oferta vigente es suya.
- * Las cartas que otro usuario le propuso siguen libres. `id_usuario_turno` nulo equivale al destinatario (`id_usuario_2`).
- */
+
+// Impide editar o eliminar una carta que el usuario ofreció en una propuesta abierta (EN_NEGOCIACION).
+// Solo bloquea si el usuario no tiene el turno, es decir, si la oferta vigente es suya.
+// Las cartas que otro usuario le propuso siguen libres. `id_usuario_turno` nulo equivale al destinatario (`id_usuario_2`).
+//
 // Cuenta solo filas activas: TypeORM excluye las eliminadas con soft delete
 async function validarCupo(
     repo: Repository<CartaOfrecida> | Repository<CartaDeseada>,

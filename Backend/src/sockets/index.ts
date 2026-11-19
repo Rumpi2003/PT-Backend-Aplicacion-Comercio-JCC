@@ -22,7 +22,7 @@ const mensajeDeError = (error: unknown): string => {
     return 'Error interno del servidor';
 };
 
-/** Ejecuta el handler y responde por el ack; una excepción nunca debe escapar de un handler asíncrono. */
+// Ejecuta el handler y responde por el ack; una excepción nunca debe escapar de un handler asíncrono. 
 const manejar = <T>(ack: Ack<T> | undefined, accion: () => Promise<T | void>) => {
     const responder = typeof ack === 'function' ? ack : () => {};
     accion().then(

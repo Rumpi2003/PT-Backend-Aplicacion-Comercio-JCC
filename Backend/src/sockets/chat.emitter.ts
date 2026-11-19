@@ -7,7 +7,7 @@ export const registrarServidorChat = (servidor: ChatServer): void => {
     io = servidor;
 };
 
-/** Avisa a los participantes conectados que el chat se cerró (la transacción dejó de estar PENDIENTE) y los saca de la sala. */
+// Avisa a los participantes conectados que el chat se cerró (la transacción dejó de estar PENDIENTE) y los saca de la sala. 
 export const emitirChatCerrado = (idTransaccion: number): void => {
     if (!io) return;
     const sala = salaTransaccion(idTransaccion);
@@ -15,12 +15,12 @@ export const emitirChatCerrado = (idTransaccion: number): void => {
     io.in(sala).socketsLeave(sala);
 };
 
-/** Avisa a la sala que `id_lector` leyó los mensajes hasta `hasta_id_mensaje`. */
+// Avisa a la sala que `id_lector` leyó los mensajes hasta `hasta_id_mensaje`.
 export const emitirMensajesLeidos = (payload: MensajesLeidos): void => {
     io?.to(salaTransaccion(payload.id_transaccion)).emit('chat:leido', payload);
 };
 
-/** Avisa a los participantes (en todas sus sesiones, estén o no en el chat) que cambió el estado de la transacción. */
+// Avisa a los participantes (en todas sus sesiones, estén o no en el chat) que cambió el estado de la transacción.
 export const emitirCambioTransaccion = (idsUsuario: number[], payload: CambioEstadoTransaccion): void => {
     if (!io) return;
     const salas = [...new Set(idsUsuario)].map(salaUsuario);
@@ -33,12 +33,12 @@ export const emitirCambioTransaccion = (idsUsuario: number[], payload: CambioEst
         .catch(() => {});
 };
 
-/** Desconecta todas las sesiones del usuario (p. ej. al suspender su cuenta); solo debe llamarse tras confirmar el cambio en BD. */
+// Desconecta todas las sesiones del usuario (p. ej. al suspender su cuenta); solo debe llamarse tras confirmar el cambio en BD.
 export const desconectarUsuario = (idUsuario: number): void => {
     io?.in(salaUsuario(idUsuario)).disconnectSockets(true);
 };
 
-/** Indica si algún socket del usuario está en la sala del chat; si lo está, el push de un mensaje nuevo sobra. */
+// Indica si algún socket del usuario está en la sala del chat; si lo está, el push de un mensaje nuevo sobra.
 export const usuarioEnSalaChat = async (idUsuario: number, idTransaccion: number): Promise<boolean> => {
     if (!io) return false;
     const sockets = await io.in(salaTransaccion(idTransaccion)).fetchSockets();

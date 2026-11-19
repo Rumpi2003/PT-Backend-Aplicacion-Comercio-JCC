@@ -37,7 +37,7 @@ interface CartaBloqueada {
     stock_disponible: number;
 }
 
-/** diferencia_a_pagar_N es lo que debe pagar el usuario N para equilibrar el valor de la transacción. */
+// diferencia_a_pagar_N es lo que debe pagar el usuario N para equilibrar el valor de la transacción.
 export function calcularDiferencia(recibe1: number, entrega1: number) {
     const diferencia = recibe1 - entrega1;
     return {
@@ -74,12 +74,12 @@ export interface TransaccionExpirada {
     estado_anterior: estadoTransaccion;
 }
 
-/** Avisa por socket a los participantes que cambió la transacción; solo debe llamarse tras confirmar el cambio en BD. */
+// Avisa por socket a los participantes que cambió la transacción; solo debe llamarse tras confirmar el cambio en BD.
 function avisarCambio(usuarios: number[], idTransaccion: number, estado: estadoTransaccion, cambio: CambioTransaccion): void {
     emitirCambioTransaccion(usuarios, { id_transaccion: idTransaccion, estado, cambio });
 }
 
-/** Cierra el chat y avisa a los participantes de las transacciones que acaban de expirar; solo debe llamarse tras confirmar el cambio en BD. */
+// Cierra el chat y avisa a los participantes de las transacciones que acaban de expirar; solo debe llamarse tras confirmar el cambio en BD.
 function publicarExpiradas(expiradas: TransaccionExpirada[]): void {
     for (const e of expiradas) {
         if (e.estado_anterior === estadoTransaccion.PENDIENTE) emitirChatCerrado(e.id_transaccion);
@@ -88,11 +88,9 @@ function publicarExpiradas(expiradas: TransaccionExpirada[]): void {
     }
 }
 
-/**
- * Cancela las transacciones activas (EN_NEGOCIACION o PENDIENTE) de `idUsuario`, p. ej. al suspender su cuenta.
- * El stock y el cupo se liberan solos porque se calculan a partir del estado. Debe llamarse dentro de una transacción de BD
- * y publicar el resultado con `publicarCancelaciones` tras el commit.
- */
+// Cancela las transacciones activas (EN_NEGOCIACION o PENDIENTE) de `idUsuario`, p. ej. al suspender su cuenta.
+// El stock y el cupo se liberan solos porque se calculan a partir del estado. Debe llamarse dentro de una transacción de BD
+// y publicar el resultado con `publicarCancelaciones` tras el commit.
 export async function cancelarActivasDeUsuario(manager: EntityManager, idUsuario: number): Promise<TransaccionExpirada[]> {
     const filas = filasDe(await manager.query(`
         UPDATE transaccion t
@@ -116,7 +114,7 @@ export async function cancelarActivasDeUsuario(manager: EntityManager, idUsuario
     }));
 }
 
-/** Publica las cancelaciones de `cancelarActivasDeUsuario`; solo debe llamarse tras confirmar el cambio en BD. */
+// Publica las cancelaciones de `cancelarActivasDeUsuario`; solo debe llamarse tras confirmar el cambio en BD.
 export function publicarCancelaciones(canceladas: TransaccionExpirada[], cambio: CambioTransaccion): void {
     for (const c of canceladas) {
         if (c.estado_anterior === estadoTransaccion.PENDIENTE) emitirChatCerrado(c.id_transaccion);
@@ -125,12 +123,10 @@ export function publicarCancelaciones(canceladas: TransaccionExpirada[], cambio:
     }
 }
 
-/**
- * Cancela las transacciones sin respuesta que superaron su plazo (liberando cupo y, en PENDIENTE, el stock reservado).
- * Es idempotente; con `idUsuario` solo revisa las transacciones de ese usuario.
- * Dentro de una transacción de BD hay que pasar `pendientesDePublicar` y llamar a `publicarExpiradas` tras el commit,
- * porque un rollback deshace la expiración; sin él (consulta suelta) se publica de inmediato.
- */
+// Cancela las transacciones sin respuesta que superaron su plazo (liberando cupo y, en PENDIENTE, el stock reservado).
+// Es idempotente; con `idUsuario` solo revisa las transacciones de ese usuario.
+// Dentro de una transacción de BD hay que pasar `pendientesDePublicar` y llamar a `publicarExpiradas` tras el commit,
+// porque un rollback deshace la expiración; sin él (consulta suelta) se publica de inmediato.
 export async function expirarTransaccionesVencidas(
     manager: EntityManager = AppDataSource.manager,
     idUsuario?: number,
@@ -168,11 +164,9 @@ export async function expirarTransaccionesVencidas(
     return expiradas;
 }
 
-/**
- * Para el flujo de aceptación (paso a PENDIENTE): ambos usuarios deben tener cupo.
- * Debe llamarse dentro de la transacción que cambia el estado; bloquea a los usuarios en orden de id
- * y con el mismo bloqueo que usa la creación, para no evadir el límite en paralelo.
- */
+// Para el flujo de aceptación (paso a PENDIENTE): ambos usuarios deben tener cupo.
+// Debe llamarse dentro de la transacción que cambia el estado; bloquea a los usuarios en orden de id
+// y con el mismo bloqueo que usa la creación, para no evadir el límite en paralelo.
 export async function validarCupoPendientes(
     manager: EntityManager,
     idActual: number,
@@ -197,7 +191,7 @@ export async function validarCupoPendientes(
     }
 }
 
-/** Barrido periódico; el vencimiento también se aplica al consultar o crear transacciones. */
+// Barrido periódico; el vencimiento también se aplica al consultar o crear transacciones.
 export function iniciarExpiracionTransacciones(): NodeJS.Timeout {
     const ejecutar = () => expirarTransaccionesVencidas().catch(error =>
         console.error('Error al expirar transacciones vencidas:', error));
@@ -207,7 +201,7 @@ export function iniciarExpiracionTransacciones(): NodeJS.Timeout {
     return temporizador;
 }
 
-/** Proyecta la transacción desde el punto de vista de `idUsuario` (rol, contraparte, qué entrega y qué recibe). */
+// Proyecta la transacción desde el punto de vista de `idUsuario` (rol, contraparte, qué entrega y qué recibe).
 function proyectarTransaccion(t: Transaccion, idUsuario: number) {
     const soyProponente = t.usuario_1.id_usuario === idUsuario;
     const contraparte = soyProponente ? t.usuario_2 : t.usuario_1;
@@ -288,11 +282,9 @@ interface DetalleResuelto {
     precio: number;
 }
 
-/**
- * Bloquea las cartas involucradas (FOR UPDATE, en orden fijo para evitar deadlocks) y valida propiedad y stock libre.
- * `solicitadas` pertenecen a la contraparte y `ofrecidas` al usuario; el precio de las ofrecidas solo es editable
- * si `precioPropioEditable` (contraofertas), de lo contrario lo fija el servidor.
- */
+// Bloquea las cartas involucradas (FOR UPDATE, en orden fijo para evitar deadlocks) y valida propiedad y stock libre.
+// `solicitadas` pertenecen a la contraparte y `ofrecidas` al usuario; el precio de las ofrecidas solo es editable
+// si `precioPropioEditable` (contraofertas), de lo contrario lo fija el servidor.
 async function resolverDetalles(manager: EntityManager, p: {
     idUsuario: number;
     idContraparte: number;
@@ -344,7 +336,7 @@ async function resolverDetalles(manager: EntityManager, p: {
     };
 }
 
-/** La diferencia siempre se expresa desde usuario_1, sin importar quién escribió la oferta. */
+// La diferencia siempre se expresa desde usuario_1, sin importar quién escribió la oferta.
 function diferenciaDeOferta(idUsuario1: number, idAutor: number, solicitadas: DetalleResuelto[], ofrecidas: DetalleResuelto[]) {
     const valorSolicitado = sumarValor(solicitadas);
     const valorOfrecido = sumarValor(ofrecidas);
@@ -353,7 +345,7 @@ function diferenciaDeOferta(idUsuario1: number, idAutor: number, solicitadas: De
         : calcularDiferencia(valorOfrecido, valorSolicitado);
 }
 
-/** Exige que la transacción esté EN_NEGOCIACION y que sea el turno de `idUsuario` para responder. */
+// Exige que la transacción esté EN_NEGOCIACION y que sea el turno de `idUsuario` para responder.
 async function leerParaResponder(manager: EntityManager, idUsuario: number, idTransaccion: number, bloquear: boolean) {
     const [fila]: any[] = await manager.query(
         `SELECT id_usuario_1, id_usuario_2, estado, id_usuario_turno FROM transaccion
@@ -375,7 +367,7 @@ async function leerParaResponder(manager: EntityManager, idUsuario: number, idTr
     return { idUsuario1, idOtro: idUsuario1 === idUsuario ? idUsuario2 : idUsuario1 };
 }
 
-/** Exige que la transacción esté PENDIENTE y devuelve quién confirmó la entrega (si alguien lo hizo). */
+// Exige que la transacción esté PENDIENTE y devuelve quién confirmó la entrega (si alguien lo hizo).
 async function leerParaConfirmar(manager: EntityManager, idUsuario: number, idTransaccion: number) {
     const [fila]: any[] = await manager.query(
         `SELECT id_usuario_1, id_usuario_2, estado, id_usuario_confirmacion FROM transaccion
@@ -401,12 +393,10 @@ async function leerParaConfirmar(manager: EntityManager, idUsuario: number, idTr
     };
 }
 
-/**
- * Materializa el intercambio dentro de la transacción de BD que completa la operación:
- * descuenta el stock entregado (con baja lógica si llega a 0, como en el inventario) y las unidades
- * recibidas de la lista de deseos de cada usuario. Con el estado COMPLETADA la reserva deja de contar,
- * así que sin este descuento las cartas entregadas volverían a aparecer disponibles.
- */
+// Materializa el intercambio dentro de la transacción de BD que completa la operación:
+// descuenta el stock entregado (con baja lógica si llega a 0, como en el inventario) y las unidades
+// recibidas de la lista de deseos de cada usuario. Con el estado COMPLETADA la reserva deja de contar,
+// así que sin este descuento las cartas entregadas volverían a aparecer disponibles.
 async function aplicarIntercambio(manager: EntityManager, idTransaccion: number, idUsuario1: number, idUsuario2: number): Promise<void> {
     const detalles: any[] = await manager.query(`
         SELECT dt.id_carta_ofrecida, dt.cantidad, o.id_usuario AS id_dueno, o.id_tipo_carta, o.idioma,
@@ -466,7 +456,7 @@ async function aplicarIntercambio(manager: EntityManager, idTransaccion: number,
     }
 }
 
-/** Agrega a cada transacción si se puede reseñar a la contraparte (COMPLETADA) y la reseña que el usuario ya dejó. */
+// Agrega a cada transacción si se puede reseñar a la contraparte (COMPLETADA) y la reseña que el usuario ya dejó.
 async function conResenas<T extends { estado: estadoTransaccion; contraparte: { id_usuario: number } }>(
     idUsuario: number,
     items: T[]
@@ -481,10 +471,8 @@ async function conResenas<T extends { estado: estadoTransaccion; contraparte: { 
 }
 
 export const transaccionService = {
-    /**
-     * Cartas con stock libre de `idDueno`, indicando cuántas unidades de cada una
-     * figuran en la lista de deseos de `idDeseante` (mismo criterio de idioma y estado mínimo que el emparejamiento).
-     */
+    // Cartas con stock libre de `idDueno`, indicando cuántas unidades de cada una
+    // figuran en la lista de deseos de `idDeseante` (mismo criterio de idioma y estado mínimo que el emparejamiento).
     async obtenerInventarioConDeseos(idDueno: number, idDeseante: number) {
         const filas: any[] = await AppDataSource.query(`
             SELECT
@@ -537,19 +525,19 @@ export const transaccionService = {
         }));
     },
 
-    /** Inventario de la contraparte elegida en el emparejamiento. */
+    // Inventario de la contraparte elegida en el emparejamiento. 
     async obtenerInventarioContraparte(idUsuario: number, idContraparte: number) {
         await validarContraparte(AppDataSource.manager, idUsuario, idContraparte);
         return transaccionService.obtenerInventarioConDeseos(idContraparte, idUsuario);
     },
 
-    /** Inventario del propio usuario, marcando lo que la contraparte desea. */
+    // Inventario del propio usuario, marcando lo que la contraparte desea. 
     async obtenerMiInventario(idUsuario: number, idContraparte: number) {
         await validarContraparte(AppDataSource.manager, idUsuario, idContraparte);
         return transaccionService.obtenerInventarioConDeseos(idUsuario, idContraparte);
     },
 
-    /** Transacciones del usuario: activas (EN_NEGOCIACION y PENDIENTE) o historial (COMPLETADA, RECHAZADA y CANCELADA). */
+    // Transacciones del usuario: activas (EN_NEGOCIACION y PENDIENTE) o historial (COMPLETADA, RECHAZADA y CANCELADA). 
     async listarTransacciones(idUsuario: number, opciones: OpcionesListadoTransacciones = {}) {
         await expirarTransaccionesVencidas(AppDataSource.manager, idUsuario);
 
@@ -578,7 +566,7 @@ export const transaccionService = {
         return { total, resultados };
     },
 
-    /** Detalle de una transacción; solo la pueden ver sus participantes, sin importar la visibilidad del perfil. */
+    // Detalle de una transacción; solo la pueden ver sus participantes, sin importar la visibilidad del perfil. 
     async obtenerTransaccion(idUsuario: number, idTransaccion: number) {
         await expirarTransaccionesVencidas(AppDataSource.manager, idUsuario);
 
@@ -598,7 +586,7 @@ export const transaccionService = {
         return detalle!;
     },
 
-    /** Cualquiera de los participantes puede cancelar una transacción EN_NEGOCIACION o PENDIENTE para liberar cupo y stock. */
+    // Cualquiera de los participantes puede cancelar una transacción EN_NEGOCIACION o PENDIENTE para liberar cupo y stock.
     async cancelarTransaccion(idUsuario: number, idTransaccion: number) {
         const { resultado, estabaPendiente, idOtro } = await AppDataSource.transaction(async (manager) => {
             const [fila]: any[] = await manager.query(
@@ -629,7 +617,7 @@ export const transaccionService = {
         return resultado;
     },
 
-    /** Reemplaza la oferta vigente por una nueva y pasa el turno al otro usuario. No renueva el plazo de expiración. */
+    // Reemplaza la oferta vigente por una nueva y pasa el turno al otro usuario. No renueva el plazo de expiración.
     async contraofertar(idUsuario: number, idTransaccion: number, datos: DatosContraoferta) {
         if (datos.solicitadas.length + datos.ofrecidas.length === 0) {
             throw new BadRequestError('La contraoferta debe incluir al menos una carta');
@@ -674,7 +662,7 @@ export const transaccionService = {
         return resultado;
     },
 
-    /** EN_NEGOCIACION -> PENDIENTE; revalida cupo y stock porque la negociación no reserva cartas. */
+    // EN_NEGOCIACION -> PENDIENTE; revalida cupo y stock porque la negociación no reserva cartas.
     async aceptarTransaccion(idUsuario: number, idTransaccion: number) {
         const expiradas: TransaccionExpirada[] = [];
         const { resultado, idOtro } = await AppDataSource.transaction(async (manager) => {
@@ -745,10 +733,9 @@ export const transaccionService = {
         return resultado;
     },
 
-    /**
-     * Confirma que la entrega se realizó. La primera confirmación solo se registra (no renueva el plazo de expiración);
-     * la del otro usuario completa la transacción de forma atómica: descuenta stock y deseos y pasa a COMPLETADA.
-     */
+    
+    // Confirma que la entrega se realizó. La primera confirmación solo se registra (no renueva el plazo de expiración);
+    // la del otro usuario completa la transacción de forma atómica: descuenta stock y deseos y pasa a COMPLETADA.
     async confirmarCompletar(idUsuario: number, idTransaccion: number) {
         const expiradas: TransaccionExpirada[] = [];
         const { resultado, idOtro, completada } = await AppDataSource.transaction(async (manager) => {
@@ -795,7 +782,7 @@ export const transaccionService = {
         return resultado;
     },
 
-    /** Retira la propia confirmación mientras el otro usuario no haya confirmado (p. ej. por un clic equivocado). */
+    // Retira la propia confirmación mientras el otro usuario no haya confirmado (p. ej. por un clic equivocado).
     async retirarConfirmacion(idUsuario: number, idTransaccion: number) {
         const expiradas: TransaccionExpirada[] = [];
         const { resultado, idOtro } = await AppDataSource.transaction(async (manager) => {
@@ -818,6 +805,7 @@ export const transaccionService = {
         return resultado;
     },
 
+    // Crea una nueva transacción.
     async crearTransaccion(idUsuario: number, datos: DatosCrearTransaccion) {
         const idDestino = datos.id_usuario_destino;
         const solicitadas = datos.solicitadas;
