@@ -10,6 +10,7 @@ const router = Router();
  *     summary: Registro de un nuevo usuario
  *     tags:
  *       - Autenticación
+ *     security: []
  *     requestBody:
  *       required: true
  *       content:
@@ -73,6 +74,7 @@ router.post('/register', authController.register);
  *     summary: Inicio de sesión de un usuario
  *     tags:
  *       - Autenticación
+ *     security: []
  *     requestBody:
  *       required: true
  *       content:

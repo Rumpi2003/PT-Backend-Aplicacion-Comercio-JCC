@@ -1,8 +1,8 @@
 import { Entity, PrimaryColumn, Column, ManyToOne, JoinColumn } from 'typeorm';
 import { CartaOfrecida } from './cartaOfrecida.entity.js';
-import { CartaOfrecida as CartaOfrecidaType } from './cartaOfrecida.entity.js';
+import type { CartaOfrecida as CartaOfrecidaType } from './cartaOfrecida.entity.js';
 import { Transaccion } from './transaccion.entity.js';
-import { Transaccion as TransaccionType } from './transaccion.entity.js';
+import type { Transaccion as TransaccionType } from './transaccion.entity.js';
 
 @Entity({ name: 'detalle_transaccion' })
 export class DetalleTransaccion {

@@ -1,6 +1,6 @@
 import { Entity, PrimaryColumn, Column, ManyToOne, JoinColumn, Index } from 'typeorm';
 import { Usuario } from './usuario.entity.js';
-import { Usuario as UsuarioType } from './usuario.entity.js';
+import type { Usuario as UsuarioType } from './usuario.entity.js';
 
 @Entity({ name: 'reseña' })
 // La PK empieza por el reseñador; este índice acelera listar las reseñas recibidas por un usuario

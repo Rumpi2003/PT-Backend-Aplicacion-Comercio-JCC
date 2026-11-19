@@ -1,8 +1,8 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, Index } from 'typeorm';
 import { Usuario } from './usuario.entity.js';
-import { Usuario as UsuarioType } from './usuario.entity.js';
+import type { Usuario as UsuarioType } from './usuario.entity.js';
 import { Transaccion } from './transaccion.entity.js';
-import { Transaccion as TransaccionType } from './transaccion.entity.js';
+import type { Transaccion as TransaccionType } from './transaccion.entity.js';
 
 export enum estadoReporte {
     PENDIENTE = 'PENDIENTE',

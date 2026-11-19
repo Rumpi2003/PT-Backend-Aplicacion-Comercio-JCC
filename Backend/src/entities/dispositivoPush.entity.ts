@@ -1,6 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from 'typeorm';
 import { Usuario } from './usuario.entity.js';
-import { Usuario as UsuarioType } from './usuario.entity.js';
+import type { Usuario as UsuarioType } from './usuario.entity.js';
 
 // Un usuario puede tener varios dispositivos; el token de FCM es único y se reasigna si otra cuenta inicia sesión en el mismo dispositivo
 @Entity({ name: 'dispositivo_push' })

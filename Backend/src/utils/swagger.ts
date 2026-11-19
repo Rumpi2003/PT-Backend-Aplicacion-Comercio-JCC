@@ -12,12 +12,28 @@ const options: swaggerJsdoc.Options = {
             title: "Documentación API Comercio JCC",
             version: version
         },
+        servers: [
+            {
+                url: "/api"
+            }
+        ],
         components: {
-            securitySchemas: {
+            securitySchemes: {
                 bearerAuth: {
                     type: "http",
                     scheme: "bearer",
                     bearerFormat: "JWT"
+                }
+            },
+            schemas: {
+                ItemTransaccion: {
+                    type: "object",
+                    required: ["id_carta_ofrecida", "cantidad"],
+                    properties: {
+                        id_carta_ofrecida: { type: "integer" },
+                        cantidad: { type: "integer", minimum: 1 },
+                        precio_ofertado: { type: "integer", minimum: 0 }
+                    }
                 }
             }
         },

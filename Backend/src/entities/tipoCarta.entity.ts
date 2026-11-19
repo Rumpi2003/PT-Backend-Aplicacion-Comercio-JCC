@@ -1,10 +1,10 @@
 import { Entity, Column, OneToMany, ManyToOne, JoinColumn, PrimaryColumn } from 'typeorm';
 import { Franquicia } from './franquicia.entity.js';
-import { Franquicia as FranquiciaType } from './franquicia.entity.js';
+import type { Franquicia as FranquiciaType } from './franquicia.entity.js';
 import { CartaDeseada } from './cartaDeseada.entity.js';
-import { CartaDeseada as CartaDeseadaType } from './cartaDeseada.entity.js';
+import type { CartaDeseada as CartaDeseadaType } from './cartaDeseada.entity.js';
 import { CartaOfrecida } from './cartaOfrecida.entity.js';
-import { CartaOfrecida as CartaOfrecidaType } from './cartaOfrecida.entity.js';
+import type { CartaOfrecida as CartaOfrecidaType } from './cartaOfrecida.entity.js';
 
 @Entity({ name: 'tipo_carta' })
 export class TipoCarta {

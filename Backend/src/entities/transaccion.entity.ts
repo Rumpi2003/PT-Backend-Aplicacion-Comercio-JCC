@@ -1,12 +1,12 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
 import { Usuario } from './usuario.entity.js';
-import { Usuario as UsuarioType } from './usuario.entity.js';
+import type { Usuario as UsuarioType } from './usuario.entity.js';
 import { Reporte } from './reporte.entity.js';
-import { Reporte as ReporteType } from './reporte.entity.js';
+import type { Reporte as ReporteType } from './reporte.entity.js';
 import { Mensaje } from './mensaje.entity.js';
-import { Mensaje as MensajeType } from './mensaje.entity.js';
+import type { Mensaje as MensajeType } from './mensaje.entity.js';
 import { DetalleTransaccion } from './detalleTransaccion.entity.js';
-import { DetalleTransaccion as DetalleTransaccionType } from './detalleTransaccion.entity.js';
+import type { DetalleTransaccion as DetalleTransaccionType } from './detalleTransaccion.entity.js';
 
 export enum estadoTransaccion {
     EN_NEGOCIACION = 'EN_NEGOCIACION',

@@ -1,18 +1,18 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany ,JoinColumn } from 'typeorm';
 import { Comuna } from './comuna.entity.js';
-import { Comuna as ComunaType } from './comuna.entity.js';
+import type { Comuna as ComunaType } from './comuna.entity.js';
 import { Reseña } from './reseña.entity.js';
-import { Reseña as ReseñaType } from './reseña.entity.js';
+import type { Reseña as ReseñaType } from './reseña.entity.js';
 import { Transaccion } from './transaccion.entity.js';
-import { Transaccion as TransaccionType } from './transaccion.entity.js';
+import type { Transaccion as TransaccionType } from './transaccion.entity.js';
 import { Reporte } from './reporte.entity.js';
-import { Reporte as ReporteType } from './reporte.entity.js';
+import type { Reporte as ReporteType } from './reporte.entity.js';
 import { Mensaje } from './mensaje.entity.js';
-import { Mensaje as MensajeType } from './mensaje.entity.js';
+import type { Mensaje as MensajeType } from './mensaje.entity.js';
 import { CartaDeseada } from './cartaDeseada.entity.js';
-import { CartaDeseada as CartaDeseadaType } from './cartaDeseada.entity.js';
+import type { CartaDeseada as CartaDeseadaType } from './cartaDeseada.entity.js';
 import { CartaOfrecida } from './cartaOfrecida.entity.js';
-import { CartaOfrecida as CartaOfrecidaType } from './cartaOfrecida.entity.js';
+import type { CartaOfrecida as CartaOfrecidaType } from './cartaOfrecida.entity.js';
 
 export enum rolUsuario {
     USUARIO = 'USUARIO',

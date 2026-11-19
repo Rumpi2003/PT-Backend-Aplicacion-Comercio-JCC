@@ -1,6 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
 import { Usuario } from './usuario.entity.js';
-import { Usuario as UsuarioType } from './usuario.entity.js';
+import type { Usuario as UsuarioType } from './usuario.entity.js';
 
 
 @Entity({ name: 'comuna' })

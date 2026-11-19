@@ -1,10 +1,10 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, OneToMany, Unique, DeleteDateColumn } from 'typeorm';
 import { Usuario } from './usuario.entity.js';
-import { Usuario as UsuarioType } from './usuario.entity.js';
+import type { Usuario as UsuarioType } from './usuario.entity.js';
 import { TipoCarta } from './tipoCarta.entity.js';
-import { TipoCarta as TipoCartaType } from './tipoCarta.entity.js';
+import type { TipoCarta as TipoCartaType } from './tipoCarta.entity.js';
 import { DetalleTransaccion } from './detalleTransaccion.entity.js';
-import { DetalleTransaccion as DetalleTransaccionType } from './detalleTransaccion.entity.js';
+import type { DetalleTransaccion as DetalleTransaccionType } from './detalleTransaccion.entity.js';
 
 export enum Estado {
     PERFECTA = 'PERFECTA',
