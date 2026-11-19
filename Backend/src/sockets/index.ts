@@ -1,5 +1,7 @@
 import jwt from 'jsonwebtoken';
 import type { Socket } from 'socket.io';
+import { AppDataSource } from '../config/db.config.js';
+import { Usuario } from '../entities/usuario.entity.js';
 import { mensajeService } from '../services/mensaje.service.js';
 import { notificacionService } from '../services/notificacion.service.js';
 import { UnirseChatSchema, EnviarMensajeSchema, MarcarLeidosSchema } from '../validations/mensaje.validations.js';
@@ -50,7 +52,14 @@ const autenticar = (socket: ChatSocket, next: (error?: Error) => void): void => 
             return next(new Error('Token inválido'));
         }
         socket.data.user = { id_usuario: decoded.id_usuario, correo: decoded.correo };
-        next();
+        AppDataSource.getRepository(Usuario).findOne({
+            where: { id_usuario: decoded.id_usuario },
+            select: { id_usuario: true, suspendido: true }
+        }).then(cuenta => {
+            if (!cuenta) return next(new Error('Token inválido'));
+            if (cuenta.suspendido) return next(new Error('Cuenta suspendida'));
+            next();
+        }, () => next(new Error('Error interno del servidor')));
     } catch {
         next(new Error('Token inválido o expirado'));
     }

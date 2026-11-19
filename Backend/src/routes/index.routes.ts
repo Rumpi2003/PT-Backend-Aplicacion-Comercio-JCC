@@ -9,6 +9,7 @@ import transaccionRoutes from './transaccion.routes.js';
 import dispositivoRoutes from './dispositivo.routes.js';
 import resenaRoutes from './resena.routes.js';
 import popularidadRoutes from './popularidad.routes.js';
+import adminRoutes from './admin.routes.js';
 
 export default function routerApi(app: Application) {
     const router = Router();
@@ -24,4 +25,5 @@ export default function routerApi(app: Application) {
     router.use('/dispositivos', dispositivoRoutes);
     router.use('/resenas', resenaRoutes);
     router.use('/popularidad', popularidadRoutes);
+    router.use('/admin', adminRoutes);
 }

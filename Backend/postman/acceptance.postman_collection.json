@@ -1,0 +1,426 @@
+{
+  "info": {
+    "name": "Pruebas de aceptación - PT JCC",
+    "description": "Flujo de aceptación de autenticación, inventario, transacciones, reportes y moderación. Requiere la variable de entorno admin_correo y admin_contrasena, creadas previamente con npm run crear-admin.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "if (!pm.collectionVariables.get('run')) { pm.collectionVariables.set('run', String(Date.now())); }"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Autenticación",
+      "item": [
+        {
+          "name": "Registrar usuario A",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"a{{run}}@test.com\",\n  \"nombre_usuario\": \"ua{{run}}\",\n  \"id_comuna\": 1,\n  \"contraseña\": \"{{password}}\"\n}"
+            }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('Registro de usuario A devuelve 201', () => pm.response.to.have.status(201));"
+          ]}}]
+        },
+        {
+          "name": "Registrar usuario B",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"b{{run}}@test.com\",\n  \"nombre_usuario\": \"ub{{run}}\",\n  \"id_comuna\": 1,\n  \"contraseña\": \"{{password}}\"\n}"
+            }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('Registro de usuario B devuelve 201', () => pm.response.to.have.status(201));"
+          ]}}]
+        },
+        {
+          "name": "Registro con campos faltantes devuelve 400",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/auth/register",
+            "body": { "mode": "raw", "raw": "{\"correo\": \"x{{run}}@test.com\"}" }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('Registro incompleto devuelve 400', () => pm.response.to.have.status(400));"
+          ]}}]
+        },
+        {
+          "name": "Login usuario A",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/auth/login",
+            "body": { "mode": "raw", "raw": "{\"correo\": \"a{{run}}@test.com\", \"contraseña\": \"{{password}}\"}" }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('Login de A devuelve 200 con token', () => { pm.response.to.have.status(200); const d = pm.response.json().data; pm.expect(d.token).to.be.a('string'); pm.collectionVariables.set('tokenA', d.token); pm.collectionVariables.set('idA', d.usuario.id_usuario); });"
+          ]}}]
+        },
+        {
+          "name": "Login usuario B",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/auth/login",
+            "body": { "mode": "raw", "raw": "{\"correo\": \"b{{run}}@test.com\", \"contraseña\": \"{{password}}\"}" }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('Login de B devuelve 200 con token', () => { pm.response.to.have.status(200); const d = pm.response.json().data; pm.collectionVariables.set('tokenB', d.token); pm.collectionVariables.set('idB', d.usuario.id_usuario); });"
+          ]}}]
+        },
+        {
+          "name": "Login con contraseña incorrecta devuelve 401",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/auth/login",
+            "body": { "mode": "raw", "raw": "{\"correo\": \"a{{run}}@test.com\", \"contraseña\": \"Incorrecta1!\"}" }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('Contraseña incorrecta devuelve 401', () => pm.response.to.have.status(401));"
+          ]}}]
+        }
+      ]
+    },
+    {
+      "name": "2. Inventario",
+      "item": [
+        {
+          "name": "B agrega carta ofrecida",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{tokenB}}" }
+            ],
+            "url": "{{base_url}}/inventario/ofrecidas",
+            "body": { "mode": "raw", "raw": "{\"id_tipo_carta\": 39114, \"estado\": \"PERFECTA\", \"idioma\": \"Español\", \"precio\": 1000, \"cantidad\": 2}" }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('B agrega carta ofrecida con 200', () => { pm.response.to.have.status(200); });",
+            "pm.test('La respuesta incluye id_carta_ofrecida', () => { const d = pm.response.json().data; pm.expect(d).to.be.an('object'); pm.collectionVariables.set('idCartaB', d.id_carta_ofrecida); });"
+          ]}}]
+        },
+        {
+          "name": "A agrega carta ofrecida",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{tokenA}}" }
+            ],
+            "url": "{{base_url}}/inventario/ofrecidas",
+            "body": { "mode": "raw", "raw": "{\"id_tipo_carta\": 39199, \"estado\": \"PERFECTA\", \"idioma\": \"Español\", \"precio\": 1000, \"cantidad\": 1}" }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('A agrega carta ofrecida con 200', () => { pm.response.to.have.status(200); });",
+            "pm.test('La respuesta incluye id_carta_ofrecida', () => { const d = pm.response.json().data; pm.collectionVariables.set('idCartaA', d.id_carta_ofrecida); });"
+          ]}}]
+        },
+        {
+          "name": "Agregar carta repetida suma la cantidad",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{tokenA}}" }
+            ],
+            "url": "{{base_url}}/inventario/ofrecidas",
+            "body": { "mode": "raw", "raw": "{\"id_tipo_carta\": 39199, \"estado\": \"PERFECTA\", \"idioma\": \"Español\", \"precio\": 1000, \"cantidad\": 1}" }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('Carta repetida devuelve 200 y suma la cantidad a 2', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().data.cantidad).to.eql(2); });"
+          ]}}]
+        },
+        {
+          "name": "Listar inventario de A",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{tokenA}}" }],
+            "url": "{{base_url}}/inventario/ofrecidas"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('Listado de inventario devuelve 200', () => pm.response.to.have.status(200));"
+          ]}}]
+        }
+      ]
+    },
+    {
+      "name": "3. Transacciones y reportes",
+      "item": [
+        {
+          "name": "A crea transacción con B",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{tokenA}}" }
+            ],
+            "url": "{{base_url}}/transacciones",
+            "body": { "mode": "raw", "raw": "{\"id_usuario_destino\": {{idB}}, \"solicitadas\": [{\"id_carta_ofrecida\": {{idCartaB}}, \"cantidad\": 1}], \"ofrecidas\": [{\"id_carta_ofrecida\": {{idCartaA}}, \"cantidad\": 1}]}" }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('Crear transacción devuelve 201', () => pm.response.to.have.status(201));",
+            "pm.test('La transacción tiene id_transaccion', () => { const d = pm.response.json().data; pm.expect(d.id_transaccion).to.be.a('number'); pm.collectionVariables.set('idTx', d.id_transaccion); });"
+          ]}}]
+        },
+        {
+          "name": "Transacción consigo mismo devuelve 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{tokenA}}" }
+            ],
+            "url": "{{base_url}}/transacciones",
+            "body": { "mode": "raw", "raw": "{\"id_usuario_destino\": {{idA}}, \"solicitadas\": [{\"id_carta_ofrecida\": {{idCartaB}}, \"cantidad\": 1}], \"ofrecidas\": []}" }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('Transacción consigo mismo devuelve 400', () => pm.response.to.have.status(400));"
+          ]}}]
+        },
+        {
+          "name": "B acepta la transacción",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{tokenB}}" }],
+            "url": "{{base_url}}/transacciones/{{idTx}}/aceptar"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('Aceptar transacción devuelve 200', () => pm.response.to.have.status(200));"
+          ]}}]
+        },
+        {
+          "name": "Consultar transacción queda PENDIENTE",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{tokenA}}" }],
+            "url": "{{base_url}}/transacciones/{{idTx}}"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('La transacción aceptada por ambos está PENDIENTE', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().data.estado).to.eql('PENDIENTE'); });"
+          ]}}]
+        },
+        {
+          "name": "Chat disponible en transacción PENDIENTE",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{tokenA}}" }],
+            "url": "{{base_url}}/transacciones/{{idTx}}/mensajes"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('Chat de transacción PENDIENTE devuelve 200', () => pm.response.to.have.status(200));"
+          ]}}]
+        },
+        {
+          "name": "A reporta a B desde la transacción",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{tokenA}}" }
+            ],
+            "url": "{{base_url}}/transacciones/{{idTx}}/reportes",
+            "body": { "mode": "raw", "raw": "{\"motivo\": \"ESTAFA\", \"descripcion_reporte\": \"Reporte de prueba de aceptación\"}" }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('Reporte desde transacción devuelve 201', () => pm.response.to.have.status(201));",
+            "pm.test('El reporte tiene id', () => { const d = pm.response.json().data; pm.collectionVariables.set('idReporteTx', d.id_reporte); });"
+          ]}}]
+        },
+        {
+          "name": "Segundo reporte de A a B por la misma transacción devuelve 409",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{tokenA}}" }
+            ],
+            "url": "{{base_url}}/transacciones/{{idTx}}/reportes",
+            "body": { "mode": "raw", "raw": "{\"motivo\": \"SPAM\", \"descripcion_reporte\": \"Segundo intento de reporte\"}" }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('Duplicado de reporte de transacción devuelve 409', () => pm.response.to.have.status(409));"
+          ]}}]
+        },
+        {
+          "name": "A reporta el perfil de B",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{tokenA}}" }
+            ],
+            "url": "{{base_url}}/usuarios/{{idB}}/reportes",
+            "body": { "mode": "raw", "raw": "{\"motivo\": \"SPAM\", \"descripcion_reporte\": \"Reporte de perfil de prueba\"}" }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('Reporte desde perfil devuelve 201', () => pm.response.to.have.status(201));",
+            "pm.test('El reporte de perfil tiene id', () => { const d = pm.response.json().data; pm.collectionVariables.set('idReporteB', d.id_reporte); });"
+          ]}}]
+        }
+      ]
+    },
+    {
+      "name": "4. Moderación y suspensión",
+      "item": [
+        {
+          "name": "Login de administrador",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/auth/login",
+            "body": { "mode": "raw", "raw": "{\"correo\": \"{{admin_correo}}\", \"contraseña\": \"{{admin_contrasena}}\"}" }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('Login de administrador devuelve 200', () => { pm.response.to.have.status(200); pm.collectionVariables.set('tokenAdmin', pm.response.json().data.token); });"
+          ]}}]
+        },
+        {
+          "name": "Usuario regular no accede a reportes admin (403)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{tokenA}}" }],
+            "url": "{{base_url}}/admin/reportes"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('Usuario regular recibe 403 en ruta admin', () => pm.response.to.have.status(403));"
+          ]}}]
+        },
+        {
+          "name": "Admin lista reportes",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{tokenAdmin}}" }],
+            "url": "{{base_url}}/admin/reportes?estado=PENDIENTE"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('Admin lista reportes con 200', () => pm.response.to.have.status(200));"
+          ]}}]
+        },
+        {
+          "name": "Admin consulta detalle del reporte de transacción",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{tokenAdmin}}" }],
+            "url": "{{base_url}}/admin/reportes/{{idReporteTx}}"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('Detalle de reporte devuelve 200', () => pm.response.to.have.status(200));"
+          ]}}]
+        },
+        {
+          "name": "SANCIONADO sin resolución devuelve 400",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{tokenAdmin}}" }
+            ],
+            "url": "{{base_url}}/admin/reportes/{{idReporteB}}/estado",
+            "body": { "mode": "raw", "raw": "{\"estado\": \"SANCIONADO\"}" }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('Sancionar sin resolución devuelve 400', () => pm.response.to.have.status(400));"
+          ]}}]
+        },
+        {
+          "name": "Admin sanciona reporte de perfil de B",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{tokenAdmin}}" }
+            ],
+            "url": "{{base_url}}/admin/reportes/{{idReporteB}}/estado",
+            "body": { "mode": "raw", "raw": "{\"estado\": \"SANCIONADO\", \"resolucion\": \"Sanción de prueba de aceptación\"}" }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('Sancionar con resolución devuelve 200', () => pm.response.to.have.status(200));"
+          ]}}]
+        },
+        {
+          "name": "Login de usuario suspendido devuelve 403",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/auth/login",
+            "body": { "mode": "raw", "raw": "{\"correo\": \"b{{run}}@test.com\", \"contraseña\": \"{{password}}\"}" }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('Usuario suspendido recibe 403', () => pm.response.to.have.status(403));",
+            "pm.test('La respuesta incluye la resolución', () => { pm.expect(JSON.stringify(pm.response.json())).to.include('Sanción de prueba de aceptación'); });"
+          ]}}]
+        },
+        {
+          "name": "Admin levanta la suspensión",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{tokenAdmin}}" }],
+            "url": "{{base_url}}/admin/usuarios/{{idB}}/suspension"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('Levantar suspensión devuelve 200', () => pm.response.to.have.status(200));"
+          ]}}]
+        },
+        {
+          "name": "Usuario B vuelve a iniciar sesión tras levantar suspensión",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/auth/login",
+            "body": { "mode": "raw", "raw": "{\"correo\": \"b{{run}}@test.com\", \"contraseña\": \"{{password}}\"}" }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('Login de B vuelve a devolver 200', () => pm.response.to.have.status(200));"
+          ]}}]
+        },
+        {
+          "name": "Admin marca reporte de transacción como DESESTIMADO",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{tokenAdmin}}" }
+            ],
+            "url": "{{base_url}}/admin/reportes/{{idReporteTx}}/estado",
+            "body": { "mode": "raw", "raw": "{\"estado\": \"DESESTIMADO\"}" }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('Desestimar reporte devuelve 200', () => pm.response.to.have.status(200));"
+          ]}}]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    { "key": "run", "value": "" },
+    { "key": "idA", "value": "" },
+    { "key": "idB", "value": "" },
+    { "key": "tokenA", "value": "" },
+    { "key": "tokenB", "value": "" },
+    { "key": "tokenAdmin", "value": "" },
+    { "key": "idCartaA", "value": "" },
+    { "key": "idCartaB", "value": "" },
+    { "key": "idTx", "value": "" },
+    { "key": "idReporteTx", "value": "" },
+    { "key": "idReporteB", "value": "" }
+  ]
+}

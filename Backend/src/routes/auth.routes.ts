@@ -98,6 +98,8 @@ router.post('/register', authController.register);
  *         description: Datos inválidos [lista de campos con errores]
  *       401:
  *         description: Credenciales incorrectas
+ *       403:
+ *         description: Cuenta suspendida por un administrador. El campo errors contiene la resolución de la sanción
  *       500:
  *         description: Error interno del servidor
  */

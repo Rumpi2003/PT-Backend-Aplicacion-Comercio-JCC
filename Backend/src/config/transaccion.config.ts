@@ -20,3 +20,8 @@ export const LIMITES_COLECCION = {
     maxListaDeseos: entero('MAX_LISTA_DESEOS', 50),
     maxInventarioCartas: entero('MAX_INVENTARIO_CARTAS', 250)
 } as const;
+
+export const LIMITES_REPORTES = {
+    // Días desde el último cambio de estado de una transacción durante los que se puede reportar a la contraparte
+    diasPlazoReporte: entero('REPORTE_DIAS_PLAZO', 30)
+} as const;

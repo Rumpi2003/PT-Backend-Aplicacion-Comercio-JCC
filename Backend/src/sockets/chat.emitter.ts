@@ -33,6 +33,11 @@ export const emitirCambioTransaccion = (idsUsuario: number[], payload: CambioEst
         .catch(() => {});
 };
 
+/** Desconecta todas las sesiones del usuario (p. ej. al suspender su cuenta); solo debe llamarse tras confirmar el cambio en BD. */
+export const desconectarUsuario = (idUsuario: number): void => {
+    io?.in(salaUsuario(idUsuario)).disconnectSockets(true);
+};
+
 /** Indica si algún socket del usuario está en la sala del chat; si lo está, el push de un mensaje nuevo sobra. */
 export const usuarioEnSalaChat = async (idUsuario: number, idTransaccion: number): Promise<boolean> => {
     if (!io) return false;

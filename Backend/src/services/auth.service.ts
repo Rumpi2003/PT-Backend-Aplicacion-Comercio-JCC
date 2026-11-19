@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 import { AppDataSource } from '../config/db.config.js';
 import { Usuario } from '../entities/usuario.entity.js';
 import { Comuna } from '../entities/comuna.entity.js';
-import { ConflictError, CredentialError } from '../handlers/errorHandlers.js';
+import { ConflictError, CredentialError, SuspensionError } from '../handlers/errorHandlers.js';
 
 type RegisterInput = {
     correo: string;
@@ -124,6 +124,17 @@ export const authService = {
 
         if (!contraseñaValida) {
             throw new CredentialError('La contraseña es incorrecta');
+        }
+
+        if (usuario.suspendido) {
+            // Se muestra la resolución del último reporte sancionatorio, que es la razón que el administrador escribió
+            const [sancion] = await AppDataSource.query(
+                `SELECT resolucion FROM reporte
+                 WHERE id_usuario_reportado = $1 AND estado = 'SANCIONADO'
+                 ORDER BY id_reporte DESC LIMIT 1`,
+                [usuario.id_usuario]
+            );
+            throw new SuspensionError(sancion?.resolucion ?? 'La cuenta fue suspendida por un administrador');
         }
 
         const token = firmarToken(usuario);

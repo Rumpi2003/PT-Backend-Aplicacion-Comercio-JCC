@@ -89,6 +89,43 @@ function publicarExpiradas(expiradas: TransaccionExpirada[]): void {
 }
 
 /**
+ * Cancela las transacciones activas (EN_NEGOCIACION o PENDIENTE) de `idUsuario`, p. ej. al suspender su cuenta.
+ * El stock y el cupo se liberan solos porque se calculan a partir del estado. Debe llamarse dentro de una transacción de BD
+ * y publicar el resultado con `publicarCancelaciones` tras el commit.
+ */
+export async function cancelarActivasDeUsuario(manager: EntityManager, idUsuario: number): Promise<TransaccionExpirada[]> {
+    const filas = filasDe(await manager.query(`
+        UPDATE transaccion t
+        SET estado = '${estadoTransaccion.CANCELADA}', fecha_estado = NOW()
+        FROM (
+            SELECT id_transaccion, estado::text AS estado_anterior
+            FROM transaccion
+            WHERE estado IN ('${estadoTransaccion.EN_NEGOCIACION}', '${estadoTransaccion.PENDIENTE}')
+              AND (id_usuario_1 = $1 OR id_usuario_2 = $1)
+            FOR UPDATE
+        ) v
+        WHERE t.id_transaccion = v.id_transaccion
+        RETURNING t.id_transaccion, t.id_usuario_1, t.id_usuario_2, v.estado_anterior
+    `, [idUsuario]));
+
+    return filas.map(f => ({
+        id_transaccion: Number(f.id_transaccion),
+        id_usuario_1: Number(f.id_usuario_1),
+        id_usuario_2: Number(f.id_usuario_2),
+        estado_anterior: f.estado_anterior as estadoTransaccion
+    }));
+}
+
+/** Publica las cancelaciones de `cancelarActivasDeUsuario`; solo debe llamarse tras confirmar el cambio en BD. */
+export function publicarCancelaciones(canceladas: TransaccionExpirada[], cambio: CambioTransaccion): void {
+    for (const c of canceladas) {
+        if (c.estado_anterior === estadoTransaccion.PENDIENTE) emitirChatCerrado(c.id_transaccion);
+        avisarCambio([c.id_usuario_1, c.id_usuario_2], c.id_transaccion, estadoTransaccion.CANCELADA, cambio);
+        notificacionService.notificar([c.id_usuario_1, c.id_usuario_2], 'CANCELADA', c.id_transaccion);
+    }
+}
+
+/**
  * Cancela las transacciones sin respuesta que superaron su plazo (liberando cupo y, en PENDIENTE, el stock reservado).
  * Es idempotente; con `idUsuario` solo revisa las transacciones de ese usuario.
  * Dentro de una transacción de BD hay que pasar `pendientesDePublicar` y llamar a `publicarExpiradas` tras el commit,

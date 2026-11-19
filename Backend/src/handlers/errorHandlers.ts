@@ -34,6 +34,15 @@ export class ConflictError extends Error {
     }
 }
 
+export class SuspensionError extends Error {
+    statusCode = 403;
+
+    constructor(public motivo: string) {
+        super('Cuenta suspendida');
+        this.name = 'SuspensionError';
+    }
+}
+
 export class ExternalApiError extends Error {
     statusCode = 502;
 

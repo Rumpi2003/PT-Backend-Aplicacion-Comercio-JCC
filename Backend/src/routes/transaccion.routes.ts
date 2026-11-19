@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { transaccionController } from '../controllers/transaccion.controller.js';
 import { mensajeController } from '../controllers/mensaje.controller.js';
+import { reporteController } from '../controllers/reporte.controller.js';
 import { authMiddleware } from '../middleware/auth.middleware.js';
 
 const router = Router();
@@ -18,5 +19,6 @@ router.patch('/:idTransaccion/aceptar', authMiddleware, transaccionController.ac
 router.patch('/:idTransaccion/rechazar', authMiddleware, transaccionController.rechazarTransaccion);
 router.patch('/:idTransaccion/completar', authMiddleware, transaccionController.completarTransaccion);
 router.delete('/:idTransaccion/completar', authMiddleware, transaccionController.retirarConfirmacion);
+router.post('/:idTransaccion/reportes', authMiddleware, reporteController.reportarTransaccion);
 
 export default router;

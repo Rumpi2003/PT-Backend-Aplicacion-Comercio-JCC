@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, OneToOne } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, Index } from 'typeorm';
 import { Usuario } from './usuario.entity.js';
 import { Usuario as UsuarioType } from './usuario.entity.js';
 import { Transaccion } from './transaccion.entity.js';
@@ -6,7 +6,6 @@ import { Transaccion as TransaccionType } from './transaccion.entity.js';
 
 export enum estadoReporte {
     PENDIENTE = 'PENDIENTE',
-    EN_REVISION = 'EN_REVISION',
     DESESTIMADO = 'DESESTIMADO',
     SANCIONADO = 'SANCIONADO',
     ARCHIVADO = 'ARCHIVADO'
@@ -27,7 +26,12 @@ export enum Motivo {
     OTRO = 'OTRO',
 }
 
+// Un reporte por reportante y transacción; los reportes de perfil (id_transaccion NULL) quedan fuera del índice
 @Entity({ name: 'reporte' })
+@Index('UQ_reporte_reportante_transaccion', ['usuario_reportante', 'transaccion'], {
+    unique: true,
+    where: '"id_transaccion" IS NOT NULL'
+})
 export class Reporte {
     @PrimaryGeneratedColumn({ name: 'id_reporte', type: 'int' })
     id_reporte!: number;
@@ -40,7 +44,8 @@ export class Reporte {
     @JoinColumn({ name: 'id_usuario_reportado' })
     usuario_reportado!: UsuarioType;
 
-    @OneToOne(() => Transaccion, (transaccion) => transaccion.reporte, { nullable: true, onDelete: 'SET NULL', onUpdate: 'CASCADE' })
+    // Un mismo chat puede originar varios reportes (p. ej. de ambos participantes), por eso es ManyToOne
+    @ManyToOne(() => Transaccion, (transaccion) => transaccion.reportes, { nullable: true, onDelete: 'SET NULL', onUpdate: 'CASCADE' })
     @JoinColumn({ name: 'id_transaccion' })
     transaccion!: TransaccionType | null;
 
@@ -49,6 +54,10 @@ export class Reporte {
 
     @Column({ type: 'varchar', length: 255 })
     descripcion_reporte!: string;
+
+    // Justificación del administrador al cambiar el estado; obligatoria al sancionar y visible para el usuario sancionado
+    @Column({ type: 'varchar', length: 255, nullable: true, default: null })
+    resolucion!: string | null;
 
     @Column({ type: 'enum', enum: estadoReporte })
     estado!: estadoReporte;

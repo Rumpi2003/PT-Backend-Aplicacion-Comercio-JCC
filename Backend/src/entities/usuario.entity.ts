@@ -14,6 +14,11 @@ import { CartaDeseada as CartaDeseadaType } from './cartaDeseada.entity.js';
 import { CartaOfrecida } from './cartaOfrecida.entity.js';
 import { CartaOfrecida as CartaOfrecidaType } from './cartaOfrecida.entity.js';
 
+export enum rolUsuario {
+    USUARIO = 'USUARIO',
+    ADMIN = 'ADMIN'
+}
+
 @Entity({ name: 'usuario' })
 export class Usuario {
     @PrimaryGeneratedColumn({ name: 'id_usuario', type: 'int' })
@@ -55,6 +60,14 @@ export class Usuario {
 
     @Column({ type: 'boolean', default: true })
     visibilidad_perfil!: boolean;
+
+    // Solo se asigna desde la base de datos; el registro nunca la recibe
+    @Column({ type: 'enum', enum: rolUsuario, default: rolUsuario.USUARIO })
+    rol!: rolUsuario;
+
+    // Una cuenta suspendida no puede usar la API ni el chat; solo un administrador la levanta
+    @Column({ type: 'boolean', default: false })
+    suspendido!: boolean;
 
     @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
     fecha_registro!: Date;

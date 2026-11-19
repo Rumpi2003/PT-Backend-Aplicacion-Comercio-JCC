@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { usuarioController } from '../controllers/usuario.controller.js';
 import { resenaController } from '../controllers/resena.controller.js';
+import { reporteController } from '../controllers/reporte.controller.js';
 import { authMiddleware } from '../middleware/auth.middleware.js';
 
 const router = Router();
@@ -23,6 +24,7 @@ router.put('/ubicacion', authMiddleware, usuarioController.updateUbicacion);
 
 // Perfil público; las rutas con parámetro van al final para no tapar las rutas fijas de arriba
 router.get('/:idUsuario/resenas', authMiddleware, resenaController.listarRecibidas);
+router.post('/:idUsuario/reportes', authMiddleware, reporteController.reportarUsuario);
 router.get('/:idUsuario', authMiddleware, usuarioController.getPerfilPublico);
 
 export default router;

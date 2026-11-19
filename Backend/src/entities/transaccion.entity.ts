@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, OneToOne, OneToMany } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
 import { Usuario } from './usuario.entity.js';
 import { Usuario as UsuarioType } from './usuario.entity.js';
 import { Reporte } from './reporte.entity.js';
@@ -53,9 +53,8 @@ export class Transaccion {
     @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
     fecha_estado!: Date;
 
-    @OneToOne(() => Reporte, (reporte) => reporte.transaccion, { nullable: true, onDelete: 'SET NULL', onUpdate: 'CASCADE' })
-    @JoinColumn({ name: 'id_reporte' })
-    reporte!: ReporteType | null;
+    @OneToMany(() => Reporte, (reporte) => reporte.transaccion)
+    reportes!: ReporteType[];
 
     @OneToMany(() => Mensaje, (mensaje) => mensaje.transaccion, { nullable: true })
     mensajes!: MensajeType[];

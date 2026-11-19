@@ -1,7 +1,7 @@
 import type { Request, Response } from 'express';
 import { authService } from '../services/auth.service.js';
 import { sendSuccess, sendError } from '../handlers/responseHandlers.js'
-import { ConflictError, CredentialError } from '../handlers/errorHandlers.js';
+import { ConflictError, CredentialError, SuspensionError } from '../handlers/errorHandlers.js';
 import { RegistrarUsuarioSchema, LoginUsuarioSchema } from '../validations/usuario.validation.js';
 
 export const authController = {
@@ -35,6 +35,8 @@ export const authController = {
         } catch (error: any) {
             if (error instanceof CredentialError) {
                 sendError(res, 'Credenciales incorrectas', [error.message], error.statusCode);
+            } else if (error instanceof SuspensionError) {
+                sendError(res, error.message, [error.motivo], error.statusCode);
             } else {
                 sendError(res, 'Error interno del servidor', [error.message], 500);
             }
